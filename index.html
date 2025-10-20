@@ -3,54 +3,95 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>クイズアプリ（GitHub Pages テンプレ）</title>
+  <title>クイズアプリ（1ファイル完結）</title>
   <style>
-    :root{ --bg:#0b0f17; --panel:#121826; --text:#e6e9ef; --muted:#9aa4b2; --accent:#7c4dff; --accent-2:#00e5ff; --ok:#2ecc71; --ng:#e74c3c; --shadow:0 10px 30px rgba(0,0,0,.35) }
+    :root{
+      --bg:#0b0f17;      /* 背景 */
+      --panel:#121826;   /* カード */
+      --text:#e6e9ef;    /* 文字 */
+      --muted:#9aa4b2;   /* 補助文字 */
+      --accent:#7c4dff;  /* アクセント（紫） */
+      --accent-2:#00e5ff;/* アクセント（シアン） */
+      --ok:#2ecc71;
+      --ng:#e74c3c;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{ margin:0; background: radial-gradient(1200px 600px at 20% -10%, rgba(124,77,255,.15), transparent 40%),
-                           radial-gradient(1000px 800px at 120% 120%, rgba(0,229,255,.12), transparent 40%), var(--bg);
-           color:var(--text); font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;
-           display:grid; place-items:center; padding:24px }
-    .app{width:min(900px,100%)}
-    .card{ background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-           border:1px solid rgba(255,255,255,.08); border-radius:18px; box-shadow:var(--shadow); padding:20px; backdrop-filter: blur(6px) }
-    h1{font-size:clamp(22px, 3.5vw, 32px); margin:0 0 12px}
-    .muted{color:var(--muted)} .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap} .spacer{height:12px}
-    button{cursor:pointer; border:none; background:var(--panel); color:var(--text); padding:12px 16px; border-radius:12px;
-           transition:transform .06s ease, box-shadow .2s ease, background .2s ease}
+    body{
+      margin:0; background: radial-gradient(1200px 600px at 20% -10%, rgba(124,77,255,.15), transparent 40%),
+                              radial-gradient(1000px 800px at 120% 120%, rgba(0,229,255,.12), transparent 40%),
+                              var(--bg);
+      color:var(--text); font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;
+      display:grid; place-items:center; padding:24px;
+    }
+    .app{width:min(900px,100%);}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px; box-shadow:var(--shadow); padding:20px; backdrop-filter: blur(6px);
+    }
+    h1{font-size:clamp(22px, 3.5vw, 32px); margin:0 0 12px; letter-spacing:.2px}
+    .muted{color:var(--muted)}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .spacer{height:12px}
+
+    /* ボタン */
+    button{cursor:pointer; border:none; background:var(--panel); color:var(--text);
+      padding:12px 16px; border-radius:12px; transition:transform .06s ease, box-shadow .2s ease, background .2s ease;}
     button:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.25)}
-    button:disabled{opacity:.55; cursor:not-allowed}
+    button:disabled{opacity:.55; cursor:not-allowed; transform:none; box-shadow:none}
+
     .btn-primary{background:linear-gradient(90deg, var(--accent), var(--accent-2)); color:#0b0f17; font-weight:700}
     .btn-ghost{background:transparent; border:1px solid rgba(255,255,255,.15)}
+
+    /* 選択肢 */
     .choices{display:grid; gap:12px; margin-top:12px}
-    .choice{text-align:left; padding:14px 16px; border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.02);
-            border-radius:14px; position:relative; overflow:hidden}
-    .choice.kbd::before{content:attr(data-key); position:absolute; right:10px; top:10px; font-size:12px; color:var(--muted);
-                        background:rgba(255,255,255,.06); padding:2px 6px; border-radius:6px}
+    .choice{
+      text-align:left; padding:14px 16px; border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.02);
+      border-radius:14px; position:relative; overflow:hidden
+    }
+    .choice.kbd::before{content:attr(data-key); position:absolute; right:10px; top:10px; font-size:12px; color:var(--muted); background:rgba(255,255,255,.06); padding:2px 6px; border-radius:6px}
     .choice.correct{border-color:rgba(46,204,113,.8); box-shadow:0 0 0 2px rgba(46,204,113,.25) inset}
     .choice.wrong{border-color:rgba(231,76,60,.8); box-shadow:0 0 0 2px rgba(231,76,60,.25) inset}
-    .progress{height:10px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.10)}
+
+    /* 進捗 */
+    .progress{
+      height:10px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.10)
+    }
     .bar{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); transition:width .3s ease}
-    .toggle{ --w:44px; --h:26px; width:var(--w); height:var(--h); background:#1a2234; border-radius:999px; position:relative;
-             border:1px solid rgba(255,255,255,.12) }
+
+    /* トグル */
+    .toggle{
+      --w:44px; --h:26px; width:var(--w); height:var(--h); background:#1a2234; border-radius:999px; position:relative; border:1px solid rgba(255,255,255,.12)
+    }
     .toggle input{display:none}
-    .toggle .knob{position:absolute; inset:3px; border-radius:999px; background:linear-gradient(180deg,#fff,#cfd8dc);
-                  width:calc(var(--h) - 6px); transition:transform .2s ease}
+    .toggle .knob{position:absolute; inset:3px; border-radius:999px; background:linear-gradient(180deg,#fff,#cfd8dc); width:calc(var(--h) - 6px); transition:transform .2s ease}
     .toggle input:checked + .knob{transform:translateX(calc(var(--w) - var(--h)))}
-    .center{display:flex; justify-content:center} .right{margin-left:auto}
+
+    .center{display:flex; justify-content:center;}
+    .right{margin-left:auto}
     .score-pill{padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12)}
+
+    /* フッター */
     .footer{display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:14px}
     .small{font-size:12px}
-    .fade-in{animation:fade .25s ease} @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
-    @media (min-width:720px){ .choices{grid-template-columns:1fr 1fr} }
+
+    /* アニメーション */
+    .fade-in{animation:fade .25s ease}
+    @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+
+    /* レスポンシブ */
+    @media (min-width:720px){
+      .choices{grid-template-columns:1fr 1fr}
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="card" id="screen-start">
-      <h1>クイズに挑戦！<span class="muted">（GitHub Pages テンプレ）</span></h1>
-      <p class="muted">CSV/JSON読み込み・共有QR対応。同じセットをスマホでも解けます。</p>
+      <h1>クイズに挑戦！<span class="muted">（1ファイル完結）</span></h1>
+      <p class="muted">全てこの1枚のHTMLだけで動きます。ローカル保存のハイスコア対応、タイマーON/OFF、キーボード（1〜4）で回答できます。</p>
       <div class="spacer"></div>
       <div class="row">
         <label class="row" style="gap:10px; align-items:center">
@@ -91,7 +132,8 @@
           </div>
         </div>
       </div>
-      <p class="small muted">Tip: GitHub Pagesにそのまま置けます。</p>
+      <div class="spacer"></div>
+      <p class="small muted">Tip: このファイルだけで完結。CSV/JSONで一般常識の大量問題を読み込めます（下の「問題データ読み込み」を使用）。</p>
     </div>
 
     <!-- 共有QR画面 -->
@@ -106,7 +148,7 @@
         <button id="btn-copy" class="btn-ghost">リンクをコピー</button>
       </div>
       <div class="footer">
-        <span class="small muted" id="file-warning" hidden>※ ローカルでは外部から開けません。GitHub Pages 等で公開してください。</span>
+        <span class="small muted" id="file-warning" hidden>※ 現在 <code>file://</code> で開いています。スマホから開くには、簡易サーバやGitHub Pagesなどで配信してください。</span>
         <div class="row">
           <button id="btn-share-skip" class="btn-ghost">共有せずに開始</button>
           <button id="btn-share-start" class="btn-primary">この端末で開始</button>
@@ -151,185 +193,407 @@
     </div>
   </div>
 
-<script>
-const QUESTION_BANK = [
+  <script>
+    // ==========================
+    //  設定：ここを書き換えるだけでOK
+    // ==========================
+    const QUESTION_BANK = [
+  // ── 一般常識（サンプル30問） ─────────────────────────────────
   {q:"日本の首都は？", a:["大阪","京都","東京","名古屋"], correct:2},
   {q:"富士山の標高で最も近いのは？", a:["2,776m","3,776m","4,176m","3,276m"], correct:1},
-  {q:"テニスで0点を何と言う？", a:["ゼロ","ノーカウント","ラブ","ドーナツ"], correct:2},
-  {q:"『モナ・リザ』を描いたのは？", a:["レオナルド・ダ・ヴィンチ","ミケランジェロ","ラファエロ","ボッティチェリ"], correct:0},
+  {q:"地球の自転に最も関係が深い現象は？", a:["潮の満ち引き","昼と夜","季節","地震"], correct:1},
+  {q:"1年で最も日照時間が長い日は？", a:["春分","秋分","夏至","冬至"], correct:2},
+  {q:"オリンピックは原則何年ごと？", a:["2年","3年","4年","5年"], correct:2},
+  {q:"フランスの通貨は？", a:["フラン","ユーロ","ポンド","ドル"], correct:1},
+  {q:"『走れメロス』の作者は？", a:["太宰治","夏目漱石","芥川龍之介","宮沢賢治"], correct:0},
+  {q:"元素記号Naは何の元素？", a:["ナトリウム","ニッケル","ネオン","ナイオビウム"], correct:0},
+  {q:"地中海に面していない国は？", a:["スペイン","イタリア","スイス","ギリシャ"], correct:2},
   {q:"世界で最も話者が多い言語は？", a:["英語","スペイン語","中国語(普通話)","ヒンディー語"], correct:2},
+  {q:"相対性理論で有名な物理学者は？", a:["ニュートン","アインシュタイン","マクスウェル","ガリレオ"], correct:1},
+  {q:"日本の祝日『こどもの日』は何月何日？", a:["5月3日","5月4日","5月5日","5月6日"], correct:2},
+  {q:"『モナ・リザ』を描いた画家は？", a:["レオナルド・ダ・ヴィンチ","ミケランジェロ","ラファエロ","ボッティチェリ"], correct:0},
+  {q:"人間の体で最大の臓器（内臓）は？", a:["心臓","肝臓","肺","腎臓"], correct:1},
+  {q:"パンを意味するフランス語は？", a:["pain","vin","fromage","eau"], correct:0},
+  {q:"インターネットのURLで'https'の's'は何を意味？", a:["small","secure","share","simple"], correct:1},
+  {q:"日本の都道府県はいくつ？", a:["43","45","46","47"], correct:3},
+  {q:"一週間の英語でWednesdayの略は？", a:["Mon","Tue","Wed","Thu"], correct:2},
+  {q:"π(パイ)の近似値で正しいのは？", a:["2.14","3.14","3.41","1.34"], correct:1},
+  {q:"ソーラー発電の\"ソーラー\"は何の意味？", a:["風","太陽","水","熱"], correct:1},
+  {q:"漢字『令和』の読みは？", a:["れいわ","りょうわ","れいな","りょうな"], correct:0},
+  {q:"日本の紙幣で最も額面が大きいのは？", a:["5,000円","10,000円","2,000円","50,000円"], correct:1},
+  {q:"アフリカ大陸で面積が最大の国は？", a:["ナイジェリア","エチオピア","アルジェリア","エジプト"], correct:2},
+  {q:"テニスで0点を何と言う？", a:["ゼロ","ノーカウント","ラブ","ドーナツ"], correct:2},
+  {q:"地球の衛星は？", a:["月","フォボス","タイタン","エウロパ"], correct:0},
+  {q:"世界三大宗教に含まれないのは？", a:["キリスト教","イスラム教","仏教","ヒンドゥー教"], correct:3},
+  {q:"気象で気圧の単位hPaは何の略？", a:["ヘクトパスカル","ハイパーパスカル","ヘビーパスカル","ハウスパスカル"], correct:0},
+  {q:"虹は何色？(一般的表現)", a:["5色","6色","7色","8色"], correct:2},
+  {q:"日本の最高峰は？", a:["北岳","奥穂高岳","間ノ岳","富士山"], correct:3},
+  {q:"世界遺産『姫路城』の別名は？", a:["白鷺城","金鶏城","鶴見城","白鯨城"], correct:0},
 ];
 
-async function importQuestionsFromFile(file){
-  const text = await file.text();
-  const isJSON = file.name.toLowerCase().endsWith('.json');
-  return parseQuestions(text, isJSON);
-}
-function parseQuestions(input, isJSON=false){
-  try{
-    if(isJSON){ return normalizeArray(JSON.parse(input)); }
-    const lines = input.replaceAll('\r','').split('\n').filter(l=>l.trim()!=='');
-    const rows  = lines.map(l=> splitCsvLine(l));
-    if(rows.length && String(rows[0][0]).toLowerCase().includes('question')) rows.shift();
-    const arr = rows.map(c=>({ q:c[0], a:[c[1],c[2],c[3],c[4]], correct:Number(c[5])-1 }));
-    return normalizeArray(arr);
-  }catch(e){ alert('読み込みに失敗しました: '+e.message); return []; }
-}
-function splitCsvLine(line){
-  const out=[]; let cur=''; let inQ=false;
-  for(let i=0;i<line.length;i++){
-    const ch=line[i];
-    if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; }
-    else if(ch===',' && !inQ){ out.push(cur); cur=''; }
-    else{ cur+=ch; }
-  }
-  out.push(cur); return out.map(s=>s.trim());
-}
-function normalizeArray(arr){
-  return arr.filter(x=>x&&x.q&&x.a&&x.a.length===4&&Number.isInteger(x.correct))
-            .map(x=>({ q:String(x.q), a:[...x.a.map(String)], correct: Math.max(0,Math.min(3,Number(x.correct))) }));
-}
+    // ==========================
+    //  ここから下はアプリ本体（CSV/JSON読み込み対応・正規表現未使用版）
+    // ==========================
 
-const $=(q)=>document.querySelector(q); const byId=(id)=>document.getElementById(id);
-const screens={ start:byId('screen-start'), share:byId('screen-share'), play:byId('screen-play'), result:byId('screen-result') };
-const els={ counter:byId('counter'), timer:byId('timer'), bar:byId('bar'), qtext:byId('qtext'), choices:byId('choices'), feedback:byId('feedback'), next:byId('btn-next'), skip:byId('btn-skip'), summary:byId('summary'), best:byId('best'), rate:byId('rate'), startBtn:byId('btn-start'), restartBtn:byId('btn-restart'), optTimer:byId('opt-timer'), optSeconds:byId('opt-seconds'), optCount:byId('opt-count') };
-const state={ deck:[], index:0, score:0, answered:false, timerOn:true, seconds:15, left:15, count:5, tickId:null };
-function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
-function show(screen){ Object.values(screens).forEach(s=>s.hidden=true); screens[screen].hidden=false; }
-function formatRate(ok,total){ if(total===0) return '—'; return Math.round((ok/total)*100)+'%'; }
-
-els.startBtn.addEventListener('click', ()=>{
-  state.timerOn = els.optTimer.checked; state.seconds = Number(els.optSeconds.value); state.count = Number(els.optCount.value);
-
-  if (window.__SHARED_DECK?.length) {
-    state.deck = window.__SHARED_DECK.map(item=>({ mode:'fixed',
-      q:item.q,
-      choices: item.a.map((t,idx)=>({ t, fixedIndex: idx })),
-      correctFixed: (item.correctIndex||1)-1
-    }));
-    state.index=0; state.score=0; startQuestion(); show('play'); return;
-  }
-
-  const source = window.__IMPORTED_QUESTIONS?.length ? window.__IMPORTED_QUESTIONS : QUESTION_BANK;
-  state.deck = shuffle([...source]).slice(0, state.count).map(q=>({ mode:'random', q:q.q,
-    choices: shuffle(q.a.map((t, idx)=>({ t, idxOriginal: idx }))),
-    correct: q.correct
-  }));
-
-  const serial = serializeDeck(state.deck);
-  const url = buildShareUrl(serial);
-  setupShareUI(url);
-  show('share');
-});
-
-const fileBtn=byId('btn-file'), fileInput=byId('file-input');
-fileBtn.addEventListener('click',()=>fileInput.click());
-fileInput.addEventListener('change', async (e)=>{
-  const f=e.target.files[0]; if(!f) return;
-  const arr=await importQuestionsFromFile(f);
-  if(arr.length){ window.__IMPORTED_QUESTIONS=arr; alert(`問題を${arr.length}件読み込みました`); }
-});
-const pasteBtn=byId('btn-paste');
-pasteBtn.addEventListener('click', async ()=>{
-  const txt=prompt('CSV または JSON を貼り付けてください'); if(!txt) return;
-  const looksJSON = txt.trim().startsWith('[')||txt.trim().startsWith('{');
-  const arr=parseQuestions(txt, looksJSON);
-  if(arr.length){ window.__IMPORTED_QUESTIONS=arr; alert(`問題を${arr.length}件読み込みました`); }
-});
-
-function startQuestion(){
-  clearInterval(state.tickId); state.answered=false;
-  const q = state.deck[state.index];
-  els.counter.textContent = `${state.index+1}/${state.deck.length}`;
-  els.qtext.textContent = q.q; els.feedback.textContent='選択肢をクリック（または 1〜4）'; els.next.disabled=true;
-  els.bar.style.width = Math.round((state.index/state.deck.length)*100) + '%';
-  els.choices.innerHTML='';
-
-  q.choices.forEach((opt, idx)=>{
-    const btn=document.createElement('button'); btn.className='choice kbd'; btn.dataset.key=idx+1; btn.textContent=opt.t;
-    const isCorrect = q.mode==='fixed' ? (opt.fixedIndex === q.correctFixed) : (opt.idxOriginal === q.correct);
-    btn.addEventListener('click',()=>choose(isCorrect, btn));
-    els.choices.appendChild(btn);
-  });
-
-  if(state.timerOn){
-    state.left=state.seconds; els.timer.textContent=state.left+'s'; els.timer.hidden=false;
-    state.tickId=setInterval(()=>{ state.left--; els.timer.textContent=state.left+'s';
-      if(state.left<=0){ clearInterval(state.tickId); lockChoices(); els.feedback.textContent='時間切れ…'; els.next.disabled=false; } },1000);
-  }else{ els.timer.hidden=true; }
-
-  els.skip.onclick=()=>{ clearInterval(state.tickId); lockChoices(); els.feedback.textContent='スキップしました'; els.next.disabled=false; };
-  window.onkeydown=(e)=>{ if(screens.play.hidden) return; const n=Number(e.key); if(!Number.isInteger(n)||n<1||n>4) return;
-    const btn=els.choices.children[n-1]; if(btn) btn.click(); };
-  els.next.onclick=()=>{ state.index++; if(state.index>=state.deck.length) finish(); else startQuestion(); };
-}
-
-function choose(correct, btn){
-  if(state.answered) return; state.answered=true; clearInterval(state.tickId); lockChoices();
-  btn.classList.add(correct?'correct':'wrong'); if(correct){ els.feedback.textContent='正解！'; state.score++; } else { els.feedback.textContent='残念…'; }
-  els.next.disabled=false;
-}
-function lockChoices(){ [...els.choices.children].forEach(ch=>ch.disabled=true); }
-
-function finish(){
-  els.bar.style.width='100%'; const total=state.deck.length;
-  els.summary.textContent=`あなたのスコアは ${state.score}/${total}`; els.rate.textContent=formatRate(state.score,total);
-  const key='quiz-best'; const best=Number(localStorage.getItem(key)||0);
-  if(state.score>best){ localStorage.setItem(key,String(state.score)); els.best.textContent=`${state.score}（更新！）`; } else { els.best.textContent=String(best); }
-  show('result');
-}
-
-function serializeDeck(deck){
-  return deck.map(q=>{
-    let correctIndex=1;
-    if(q.mode==='fixed'){
-      correctIndex = q.correctFixed+1;
-      return { q:q.q, a:q.choices.map(x=>x.t), correctIndex };
-    } else {
-      const idx = q.choices.findIndex(c=>c.idxOriginal===q.correct);
-      correctIndex = (idx>=0? idx:0) + 1;
-      return { q:q.q, a:q.choices.map(x=>x.t), correctIndex };
+    // CSV/JSON 読込ユーティリティ（正規表現を使わない安全実装）
+    async function importQuestionsFromFile(file){
+      const text = await file.text();
+      const isJSON = file.name.toLowerCase().endsWith('.json');
+      return parseQuestions(text, isJSON);
     }
-  });
-}
-function encodeBase64Url(utf8){
-  const bin = new TextEncoder().encode(utf8);
-  let s=''; for(let i=0;i<bin.length;i++) s+=String.fromCharCode(bin[i]);
-  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-}
-function decodeBase64Url(b64url){
-  let b64=b64url.replace(/-/g,'+').replace(/_/g,'/'); const pad=b64.length%4; if(pad) b64+='='.repeat(4-pad);
-  const bin=atob(b64); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
-}
-function buildShareUrl(serial){
-  const payload = encodeBase64Url(JSON.stringify({ deck: serial }));
-  const base = location.origin+location.pathname;
-  return base + '?deck=' + payload;
-}
-function parseDeckFromUrl(){
-  const p = new URLSearchParams(location.search).get('deck');
-  if(!p) return null;
-  try{ const json=decodeBase64Url(p); const obj=JSON.parse(json); if(Array.isArray(obj.deck)) return obj.deck; } catch(e){}
-  return null;
-}
-function setupShareUI(url){
-  const input = byId('share-url'); input.value = url;
-  const img = byId('qr');
-  img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=' + encodeURIComponent(url);
-  const warn = byId('file-warning'); warn.hidden = (location.protocol !== 'file:');
-  byId('btn-copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(url); byId('share-note').textContent='リンクをコピーしました'; }catch{} };
-  byId('btn-share-start').onclick = ()=>{ startQuestion(); show('play'); };
-  byId('btn-share-skip').onclick = ()=>{ startQuestion(); show('play'); };
-}
-(function initShared(){
-  const deck = parseDeckFromUrl();
-  if(deck){ window.__SHARED_DECK = deck;
-    const p = document.createElement('p'); p.className='small muted';
-    p.textContent = `共有された問題セットを検出しました（${deck.length}問）。「スタート」で同じセットを開始できます。`;
-    document.getElementById('screen-start').appendChild(p);
-  }
-})();
-</script>
+
+    function parseQuestions(input, isJSON=false){
+      try{
+        if(isJSON){
+          const arr = JSON.parse(input);
+          return normalizeArray(arr);
+        }
+        // CSV: question, a1, a2, a3, a4, correctIndex(1-4)
+        const lines = input.replaceAll('
+','').split('
+').filter(l => l.trim() !== '');
+        const rows  = lines.map(l => splitCsvLine(l));
+        // ヘッダ判定（小文字化して含有判定）
+        if (rows.length && String(rows[0][0]).toLowerCase().includes('question')) {
+          rows.shift();
+        }
+        const arr = rows.map(cols => ({
+          q: cols[0],
+          a: [cols[1], cols[2], cols[3], cols[4]],
+          correct: Number(cols[5]) - 1
+        }));
+        return normalizeArray(arr);
+      }catch(e){
+        alert('読み込みに失敗しました: ' + e.message);
+        return [];
+      }
+    }
+
+    // 簡易CSV（ダブルクオート対応・正規表現未使用）
+    function splitCsvLine(line){
+      const out = [];
+      let cur = '';
+      let inQ = false;
+      for (let i=0; i<line.length; i++){
+        const ch = line[i];
+        if (ch === '"'){
+          if (inQ && line[i+1] === '"'){ cur += '"'; i++; }
+          else { inQ = !inQ; }
+        } else if (ch === ',' && !inQ){
+          out.push(cur);
+          cur = '';
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur);
+      return out.map(s => s.trim());
+    }
+
+    function normalizeArray(arr){
+      return arr
+        .filter(x => x && x.q && x.a && x.a.length === 4 && Number.isInteger(x.correct))
+        .map(x => ({
+          q: String(x.q),
+          a: [String(x.a[0]), String(x.a[1]), String(x.a[2]), String(x.a[3])],
+          correct: Math.max(0, Math.min(3, Number(x.correct)))
+        }));
+    }
+
+    const $ = (q)=>document.querySelector(q);
+    const byId = (id)=>document.getElementById(id);
+
+    const screens = {
+      start: byId('screen-start'),
+      share: byId('screen-share'),
+      play: byId('screen-play'),
+      result: byId('screen-result'),
+    };
+
+    const els = {
+      counter: byId('counter'),
+      timer: byId('timer'),
+      bar: byId('bar'),
+      qtext: byId('qtext'),
+      choices: byId('choices'),
+      feedback: byId('feedback'),
+      next: byId('btn-next'),
+      skip: byId('btn-skip'),
+      summary: byId('summary'),
+      best: byId('best'),
+      rate: byId('rate'),
+      startBtn: byId('btn-start'),
+      restartBtn: byId('btn-restart'),
+      optTimer: byId('opt-timer'),
+      optSeconds: byId('opt-seconds'),
+      optCount: byId('opt-count'),
+    };
+
+    const state = {
+      deck: [],
+      index: 0,
+      score: 0,
+      answered: false,
+      timerOn: true,
+      seconds: 15,
+      left: 15,
+      count: 5,
+      tickId: null,
+    };
+
+    // Utils
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+      }
+      return arr;
+    }
+
+    function show(screen){
+      Object.values(screens).forEach(s=>s.hidden=true);
+      screens[screen].hidden=false;
+    }
+
+    function formatRate(ok, total){
+      if(total===0) return '—';
+      const r = Math.round((ok/total)*100);
+      return r + '%';
+    }
+
+    // Start
+    els.startBtn.addEventListener('click', ()=>{
+      state.timerOn = els.optTimer.checked;
+      state.seconds = Number(els.optSeconds.value);
+      state.count = Number(els.optCount.value);
+
+      // 共有リンクからのデッキがある場合は、それをそのまま使う
+      if (window.__SHARED_DECK_FROM_URL?.length) {
+        state.deck = window.__SHARED_DECK_FROM_URL.map(q=>({
+          q: q.q,
+          a: q.a.map((t,i)=>({ t, i })),
+          correct: (q.correctIndex || 1) - 1
+        }));
+        state.index=0; state.score=0;
+        startQuestion();
+        show('play');
+        return;
+      }
+
+      const source = window.__IMPORTED_QUESTIONS?.length ? window.__IMPORTED_QUESTIONS : QUESTION_BANK;
+      // デッキ作成（選択数count、選択肢はインデックス保持）
+      state.deck = shuffle([...source]).slice(0, state.count).map(q=>({
+        ...q,
+        a: shuffle([...q.a]).map((t,i)=>({t, i}))
+      }));
+
+      // 共有URL生成 & QR表示へ
+      const serial = serializeDeck(state.deck);
+      const url = buildShareUrl(serial);
+      setupShareUI(url);
+      show('share');
+    });
+
+    // ファイル選択
+    const fileBtn = document.getElementById('btn-file');
+    const fileInput = document.getElementById('file-input');
+    fileBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', async (e)=>{
+      const f=e.target.files[0]; if(!f) return;
+      const arr = await importQuestionsFromFile(f);
+      if(arr.length){ window.__IMPORTED_QUESTIONS = arr; alert(`問題を${arr.length}件読み込みました`); }
+    });
+
+    // ペースト読み込み
+    const pasteBtn = document.getElementById('btn-paste');
+    pasteBtn.addEventListener('click', async ()=>{
+      const txt = prompt('CSV または JSON を貼り付けてください');
+      if(!txt) return;
+      const looksJSON = txt.trim().startsWith('[') || txt.trim().startsWith('{');
+      const arr = parseQuestions(txt, looksJSON);
+      if(arr.length){ window.__IMPORTED_QUESTIONS = arr; alert(`問題を${arr.length}件読み込みました`); }
+    });
+
+    function startQuestion(){
+      clearInterval(state.tickId);
+      state.answered=false;
+
+      const q = state.deck[state.index];
+      const correctText = q.a.find(x=>x.i===q.correct)?.t;
+
+      els.counter.textContent = `${state.index+1}/${state.deck.length}`;
+      els.qtext.textContent = q.q;
+      els.feedback.textContent = '選択肢をクリック（または 1〜4）';
+      els.next.disabled = true;
+
+      // プログレスバー
+      const pct = Math.round((state.index/state.deck.length)*100);
+      els.bar.style.width = pct + '%';
+
+      // 選択肢
+      els.choices.innerHTML = '';
+      q.a.forEach((opt, idx)=>{
+        const btn = document.createElement('button');
+        btn.className = 'choice kbd';
+        btn.dataset.key = idx+1;
+        btn.innerHTML = `${opt.t}`;
+        btn.addEventListener('click', ()=>choose(opt.t === correctText, btn));
+        els.choices.appendChild(btn);
+      });
+
+      // タイマー
+      if(state.timerOn){
+        state.left = state.seconds;
+        els.timer.textContent = state.left + 's';
+        els.timer.hidden = false;
+        state.tickId = setInterval(()=>{
+          state.left--; els.timer.textContent = state.left + 's';
+          if(state.left<=0){
+            clearInterval(state.tickId);
+            lockChoices();
+            els.feedback.textContent = '時間切れ…';
+            els.next.disabled = false;
+          }
+        },1000);
+      }else{
+        els.timer.hidden = true;
+      }
+
+      // スキップ
+      els.skip.onclick = ()=>{
+        clearInterval(state.tickId);
+        lockChoices();
+        els.feedback.textContent = 'スキップしました';
+        els.next.disabled = false;
+      };
+
+      // キーボード（1-4）
+      window.onkeydown = (e)=>{
+        if(screens.play.hidden) return;
+        const n = Number(e.key);
+        if(!Number.isInteger(n) || n<1 || n>4) return;
+        const btn = els.choices.children[n-1];
+        if(btn) btn.click();
+      };
+
+      // 次へ
+      els.next.onclick = ()=>{
+        state.index++;
+        if(state.index>=state.deck.length){
+          finish();
+        }else{
+          startQuestion();
+        }
+      }
+    }
+
+    function choose(correct, btn){
+      if(state.answered) return;
+      state.answered = true;
+      clearInterval(state.tickId);
+      lockChoices();
+      btn.classList.add(correct? 'correct':'wrong');
+      if(correct){
+        els.feedback.textContent = '正解！';
+        state.score++;
+      }else{
+        els.feedback.textContent = '残念…';
+      }
+      els.next.disabled = false;
+    }
+
+    function lockChoices(){
+      [...els.choices.children].forEach(ch=>ch.disabled=true);
+    }
+
+    function finish(){
+      els.bar.style.width = '100%';
+      const total = state.deck.length;
+      els.summary.textContent = `あなたのスコアは ${state.score}/${total}`;
+      els.rate.textContent = formatRate(state.score, total);
+      const key='quiz-best'; const best=Number(localStorage.getItem(key)||0);
+      if(state.score>best){ localStorage.setItem(key,String(state.score)); els.best.textContent=`${state.score}（更新！）`; }
+      else { els.best.textContent=String(best); }
+      show('result');
+    }
+
+    // ===== 共有用ユーティリティ =====
+// ---- LZString（圧縮）実装（MIT, 抜粋）: compressToEncodedURIComponent / decompressFromEncodedURIComponent ----
+const LZString=(function(){function o(o,r){if(!t[o]){t[o]={};for(var n=0;n<o.length;n++)t[o][o.charAt(n)]=n}return t[o][r]}var r=String.fromCharCode,n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",t={},e={compressToEncodedURIComponent:function(o){return null==o?"":e._compress(o,6,function(o){return n.charAt(o)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:e._decompress(r.length,32,function(t){return o(n,r.charAt(t))})},_compress:function(o,n,t){if(null==o)return"";var e,i,s={},p={},u="",c="",a="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<o.length;i+=1)if(u=o.charAt(i),Object.prototype.hasOwnProperty.call(s,u)||(s[u]=f++,p[u]=!0),c=a+u,Object.prototype.hasOwnProperty.call(s,c))a=c;else{if(Object.prototype.hasOwnProperty.call(p,a)){if(a.charCodeAt(0)<256){for(e=0;h>e;e++)m<<=1,v==n-1?(v=0,d.push(t(m)),m=0):v++;for(e=0;8>e;e++)m=m<<1|a.charCodeAt(0)&1,v==n-1?(v=0,d.push(t(m)),m=0):v++,a=a.charCodeAt(0)>>1}else{for(e=0;h>e;e++)m=m<<1|1,v==n-1?(v=0,d.push(t(m)),m=0):v++;for(e=0;16>e;e++)m=m<<1|a.charCodeAt(0)&1,v==n-1?(v=0,d.push(t(m)),m=0):v++,a=a.charCodeAt(0)>>1}l--,0==l&&(l=Math.pow(2,h),h++),delete p[a]}else{for(e=0;h>e;e++)m=m<<1,v==n-1?(v=0,d.push(t(m)),m=0):v++;l--,0==l&&(l=Math.pow(2,h),h++),m<<=1,v==n-1?(v=0,d.push(t(m)),m=0):v++}0!=--l||0===Object.prototype.hasOwnProperty.call(s,c)?s[c]=f++:(delete s[a],s[c]=f++),a=String(u)}if(""!==a){if(Object.prototype.hasOwnProperty.call(p,a)){if(a.charCodeAt(0)<256){for(e=0;h>e;e++)m<<=1,v==n-1?(v=0,d.push(t(m)),m=0):v++;for(e=0;8>e;e++)m=m<<1|a.charCodeAt(0)&1,v==n-1?(v=0,d.push(t(m)),m=0):v++,a=a.charCodeAt(0)>>1}else{for(e=0;h>e;e++)m=m<<1|1,v==n-1?(v=0,d.push(t(m)),m=0):v++;for(e=0;16>e;e++)m=m<<1|a.charCodeAt(0)&1,v==n-1?(v=0,d.push(t(m)),m=0):v++,a=a.charCodeAt(0)>>1}l--,0==l&&(l=Math.pow(2,h),h++),delete p[a]}else{for(e=0;h>e;e++)m=m<<1,v==n-1?(v=0,d.push(t(m)),m=0):v++;l--,0==l&&(l=Math.pow(2,h),h++),m<<=1,v==n-1?(v=0,d.push(t(m)),m=0):v++}}for(e=0;h>e;e++)m=m<<1,v==n-1?(v=0,d.push(t(m)),m=0):v++;for(var g=0;g<3;g++)m<<=1,v==n-1?(v=0,d.push(t(m)),m=0):v++;return d.join("")},_decompress:function(o,n,t){var e,i,s,p,u,c,a,l,f=[],h=4,d=4,m=3,v="",w=[],A={val:t(0),position=n,index:1};for(i=0;3>i;i+=1)f[i]=i;for(p=0,c=Math.pow(2,2),a=1;a!=c;)u=A.val&A.position,A.position>>=1,0==A.position&&(A.position=n,A.val=t(A.index++)),p|=(u>0?1:0)*a,a<<=1;switch(e=p){case 0:for(p=0,c=Math.pow(2,8),a=1;a!=c;)u=A.val&A.position,A.position>>=1,0==A.position&&(A.position=n,A.val=t(A.index++)),p|=(u>0?1:0)*a,a<<=1;l=String.fromCharCode(p);break;case 1:for(p=0,c=Math.pow(2,16),a=1;a!=c;)u=A.val&A.position,A.position>>=1,0==A.position&&(A.position=n,A.val=t(A.index++)),p|=(u>0?1:0)*a,a<<=1;l=String.fromCharCode(p);break;case 2:return""}for(f[3]=l,s=l,w.push(l);;){if(A.index>o)return"";for(p=0,c=Math.pow(2,m),a=1;a!=c;)u=A.val&A.position,A.position>>=1,0==A.position&&(A.position=n,A.val=t(A.index++)),p|=(u>0?1:0)*a,a<<=1;switch(l=p){case 0:for(p=0,c=Math.pow(2,8),a=1;a!=c;)u=A.val&A.position,A.position>>=1,0==A.position&&(A.position=n,A.val=t(A.index++)),p|=(u>0?1:0)*a,a<<=1;f[d++]=String.fromCharCode(p),l=d-1,m--;break;case 1:for(p=0,c=Math.pow(2,16),a=1;a!=c;)u=A.val&A.position,A.position>>=1,0==A.position&&(A.position=n,A.val=t(A.index++)),p|=(u>0?1:0)*a,a<<=1;f[d++]=String.fromCharCode(p),l=d-1,m--;break;case 2:return w.join("")}if(0==m&&(m=Math.pow(2,++h)),f[l])v=f[l];else{if(l!==d)return null;v=s+s.charAt(0)}w.push(v),f[d++]=s+v.charAt(0),s=v,0==--m&&(m=Math.pow(2,++h))}};return e})();
+
+function encodePayloadForUrl(obj){ return LZString.compressToEncodedURIComponent(JSON.stringify(obj)); }
+function decodePayloadFromUrl(str){ try{ const json=LZString.decompressFromEncodedURIComponent(str); return JSON.parse(json); } catch(e){ return null; } }
+    function serializeDeck(deck){
+      // 現在の"表示順"を固定して共有する
+      return deck.map(q=>{
+        // 正解位置（現在のa配列で i===q.correct のインデックス）
+        let correctIndex = 1;
+        for(let idx=0; idx<q.a.length; idx++) if(q.a[idx].i === q.correct) { correctIndex = idx+1; break; }
+        return { q: q.q, a: q.a.map(x=>x.t), correctIndex };
+      });
+    }
+    function encodeBase64Url(utf8){
+      const bin = new TextEncoder().encode(utf8);
+      let str = '';
+      for (let i=0;i<bin.length;i++) str += String.fromCharCode(bin[i]);
+      let b64 = btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      return b64;
+    }
+    function decodeBase64Url(b64url){
+      let b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+      const pad = b64.length % 4; if(pad) b64 += '='.repeat(4-pad);
+      const binStr = atob(b64);
+      const bytes = new Uint8Array(binStr.length);
+      for(let i=0;i<binStr.length;i++) bytes[i] = binStr.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    function buildShareUrl(serial){
+      const payload = encodePayloadForUrl({ deck: serial });
+      const base = location.origin+location.pathname;
+      return base + '?deck=' + payload;
+    }));
+      const base = location.origin+location.pathname;
+      const url = base + '?deck=' + payload;
+      return url;
+    }
+    function parseDeckFromUrl(){
+      const p = new URLSearchParams(location.search).get('deck');
+      if(!p) return null;
+      const obj = decodePayloadFromUrl(p);
+      if(obj && Array.isArray(obj.deck)) return obj.deck;
+      return null;
+    }catch(e){ console.warn('deck parse error', e); }
+      return null;
+    }
+    function setupShareUI(url){
+      const input = byId('share-url'); input.value = url;
+      const img = byId('qr');
+      img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=' + encodeURIComponent(url);
+      const warn = byId('file-warning'); warn.hidden = (location.protocol !== 'file:')
+      byId('btn-copy').onclick = async ()=>{
+        try{ await navigator.clipboard.writeText(url); byId('share-note').textContent='リンクをコピーしました'; }
+        catch{ /* noop */ }
+      };
+      byId('btn-share-start').onclick = ()=>{ startQuestion(); show('play'); };
+      byId('btn-share-skip').onclick = ()=>{ startQuestion(); show('play'); };
+    }
+
+    // 起動時に共有URLを検出
+    (function initShared(){
+      const shared = parseDeckFromUrl();
+      if(shared){
+        window.__SHARED_DECK_FROM_URL = shared;
+        // 共有セットありの案内
+        const p = document.createElement('p');
+        p.className='small muted';
+        p.textContent = `共有された問題セットを検出しました（${shared.length}問）。「スタート」で同じセットを開始できます。`;
+        document.getElementById('screen-start').appendChild(p);
+      }
+    })();
+
+    els.restartBtn.addEventListener('click', ()=>{
+      show('start');
+    });
+  </script>
 </body>
 </html>
