@@ -141,7 +141,7 @@
       <h1>この問題セットを共有</h1>
       <p class="muted" id="share-note">スマホでQRを読み込むと、<b>同じ順序・同じ選択肢</b>で解けます。</p>
       <div class="center" style="margin:12px 0">
-        <img id="qr" alt="QRコード" style="width:260px;height:260px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03)"/>
+        <div id="qr" style="width:260px;height:260px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03)"></div>
       </div>
       <div class="row" style="align-items:center">
         <input id="share-url" readonly style="flex:1;min-width:260px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.2);padding:10px;border-radius:10px"/>
@@ -192,6 +192,8 @@
       <div class="center"><button id="btn-restart" class="btn-primary">もう一度</button></div>
     </div>
   </div>
+    <!-- QRコードライブラリ（ブラウザ内生成） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
     // ==========================
@@ -567,11 +569,22 @@ function decodePayloadFromUrl(str){ try{ const json=LZString.decompressFromEncod
     }
     function setupShareUI(url){
       const input = byId('share-url'); input.value = url;
-      const img = byId('qr');
-      img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=' + encodeURIComponent(url);
-      const warn = byId('file-warning'); warn.hidden = (location.protocol !== 'file:')
-      byId('btn-copy').onclick = async ()=>{
-        try{ await navigator.clipboard.writeText(url); byId('share-note').textContent='リンクをコピーしました'; }
+      const qrEl = byId('qr');
+      qrEl.innerHTML = '';
+      try{
+        new QRCode(qrEl, { text: url, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+      }catch(e){
+        // フォールバック：Google Chart 画像（CDNブロックなどの非常時）
+        const img = document.createElement('img');
+        img.alt='QR'; img.width=260; img.height=260;
+        img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=' + encodeURIComponent(url);
+        qrEl.appendChild(img);
+      }
+      const warn = byId('file-warning'); warn.hidden = (location.protocol !== 'file:');
+      byId('btn-copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(url); byId('share-note').textContent='リンクをコピーしました'; }catch{} };
+      byId('btn-share-start').onclick = ()=>{ startQuestion(); show('play'); };
+      byId('btn-share-skip').onclick = ()=>{ startQuestion(); show('play'); };
+    }
         catch{ /* noop */ }
       };
       byId('btn-share-start').onclick = ()=>{ startQuestion(); show('play'); };
