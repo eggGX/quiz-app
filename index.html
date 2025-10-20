@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>クイズアプリ（GitHub Pages テンプレ）</title>
+  <style>
+    :root{ --bg:#0b0f17; --panel:#121826; --text:#e6e9ef; --muted:#9aa4b2; --accent:#7c4dff; --accent-2:#00e5ff; --ok:#2ecc71; --ng:#e74c3c; --shadow:0 10px 30px rgba(0,0,0,.35) }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{ margin:0; background: radial-gradient(1200px 600px at 20% -10%, rgba(124,77,255,.15), transparent 40%),
+                           radial-gradient(1000px 800px at 120% 120%, rgba(0,229,255,.12), transparent 40%), var(--bg);
+           color:var(--text); font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;
+           display:grid; place-items:center; padding:24px }
+    .app{width:min(900px,100%)}
+    .card{ background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+           border:1px solid rgba(255,255,255,.08); border-radius:18px; box-shadow:var(--shadow); padding:20px; backdrop-filter: blur(6px) }
+    h1{font-size:clamp(22px, 3.5vw, 32px); margin:0 0 12px}
+    .muted{color:var(--muted)} .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap} .spacer{height:12px}
+    button{cursor:pointer; border:none; background:var(--panel); color:var(--text); padding:12px 16px; border-radius:12px;
+           transition:transform .06s ease, box-shadow .2s ease, background .2s ease}
+    button:hover{transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.25)}
+    button:disabled{opacity:.55; cursor:not-allowed}
+    .btn-primary{background:linear-gradient(90deg, var(--accent), var(--accent-2)); color:#0b0f17; font-weight:700}
+    .btn-ghost{background:transparent; border:1px solid rgba(255,255,255,.15)}
+    .choices{display:grid; gap:12px; margin-top:12px}
+    .choice{text-align:left; padding:14px 16px; border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.02);
+            border-radius:14px; position:relative; overflow:hidden}
+    .choice.kbd::before{content:attr(data-key); position:absolute; right:10px; top:10px; font-size:12px; color:var(--muted);
+                        background:rgba(255,255,255,.06); padding:2px 6px; border-radius:6px}
+    .choice.correct{border-color:rgba(46,204,113,.8); box-shadow:0 0 0 2px rgba(46,204,113,.25) inset}
+    .choice.wrong{border-color:rgba(231,76,60,.8); box-shadow:0 0 0 2px rgba(231,76,60,.25) inset}
+    .progress{height:10px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.10)}
+    .bar{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); transition:width .3s ease}
+    .toggle{ --w:44px; --h:26px; width:var(--w); height:var(--h); background:#1a2234; border-radius:999px; position:relative;
+             border:1px solid rgba(255,255,255,.12) }
+    .toggle input{display:none}
+    .toggle .knob{position:absolute; inset:3px; border-radius:999px; background:linear-gradient(180deg,#fff,#cfd8dc);
+                  width:calc(var(--h) - 6px); transition:transform .2s ease}
+    .toggle input:checked + .knob{transform:translateX(calc(var(--w) - var(--h)))}
+    .center{display:flex; justify-content:center} .right{margin-left:auto}
+    .score-pill{padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12)}
+    .footer{display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:14px}
+    .small{font-size:12px}
+    .fade-in{animation:fade .25s ease} @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+    @media (min-width:720px){ .choices{grid-template-columns:1fr 1fr} }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card" id="screen-start">
+      <h1>クイズに挑戦！<span class="muted">（GitHub Pages テンプレ）</span></h1>
+      <p class="muted">CSV/JSON読み込み・共有QR対応。同じセットをスマホでも解けます。</p>
+      <div class="spacer"></div>
+      <div class="row">
+        <label class="row" style="gap:10px; align-items:center">
+          <span>タイマーON</span>
+          <span class="toggle"><input type="checkbox" id="opt-timer" checked><span class="knob"></span></span>
+        </label>
+        <label class="row" style="gap:10px; align-items:center">
+          <span>制限秒数</span>
+          <select id="opt-seconds" style="background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.2); padding:8px 10px; border-radius:10px">
+            <option value="10">10秒</option>
+            <option value="15" selected>15秒</option>
+            <option value="20">20秒</option>
+            <option value="30">30秒</option>
+          </select>
+        </label>
+        <label class="row" style="gap:10px; align-items:center">
+          <span>出題数</span>
+          <select id="opt-count" style="background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.2); padding:8px 10px; border-radius:10px">
+            <option value="5" selected>5問</option>
+            <option value="10">10問</option>
+            <option value="20">20問</option>
+            <option value="50">50問</option>
+          </select>
+        </label>
+        <button class="btn-primary right" id="btn-start">スタート</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="card" style="background:rgba(255,255,255,.03); border:1px dashed rgba(255,255,255,.15);">
+        <div class="row" style="justify-content:space-between; align-items:center">
+          <div>
+            <div style="font-weight:700">問題データ読み込み（CSV / JSON）</div>
+            <div class="small muted">CSV 例: <code>question,choice1,choice2,choice3,choice4,correctIndex(1-4)</code></div>
+          </div>
+          <div class="row">
+            <input type="file" id="file-input" accept=".csv,.json" style="display:none">
+            <button class="btn-ghost" id="btn-file">ファイル選択</button>
+            <button class="btn-ghost" id="btn-paste">ペースト</button>
+          </div>
+        </div>
+      </div>
+      <p class="small muted">Tip: GitHub Pagesにそのまま置けます。</p>
+    </div>
+
+    <!-- 共有QR画面 -->
+    <div class="card fade-in" id="screen-share" hidden>
+      <h1>この問題セットを共有</h1>
+      <p class="muted" id="share-note">スマホでQRを読み込むと、<b>同じ順序・同じ選択肢</b>で解けます。</p>
+      <div class="center" style="margin:12px 0">
+        <img id="qr" alt="QRコード" style="width:260px;height:260px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03)"/>
+      </div>
+      <div class="row" style="align-items:center">
+        <input id="share-url" readonly style="flex:1;min-width:260px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.2);padding:10px;border-radius:10px"/>
+        <button id="btn-copy" class="btn-ghost">リンクをコピー</button>
+      </div>
+      <div class="footer">
+        <span class="small muted" id="file-warning" hidden>※ ローカルでは外部から開けません。GitHub Pages 等で公開してください。</span>
+        <div class="row">
+          <button id="btn-share-skip" class="btn-ghost">共有せずに開始</button>
+          <button id="btn-share-start" class="btn-primary">この端末で開始</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-in" id="screen-play" hidden>
+      <div class="row" style="align-items:center">
+        <div class="score-pill" id="counter">1/5</div>
+        <div class="right score-pill" id="timer">15s</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="progress" aria-label="進捗"><div class="bar" id="bar" style="width:0%"></div></div>
+      <div class="spacer"></div>
+      <h2 id="qtext">問題文</h2>
+      <div class="choices" id="choices"></div>
+      <div class="footer">
+        <span class="muted" id="feedback">選択肢をクリック（または 1〜4）</span>
+        <div class="row">
+          <button id="btn-skip" class="btn-ghost">スキップ</button>
+          <button id="btn-next" class="btn-primary" disabled>次へ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-in" id="screen-result" hidden>
+      <h1>結果</h1>
+      <p id="summary">あなたのスコアは 0/0</p>
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div class="small muted">ベストスコア</div>
+          <div id="best" style="font-weight:700; font-size:22px">—</div>
+        </div>
+        <div>
+          <div class="small muted">正答率</div>
+          <div id="rate" style="font-weight:700; font-size:22px">—</div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="center"><button id="btn-restart" class="btn-primary">もう一度</button></div>
+    </div>
+  </div>
+
+<script>
+const QUESTION_BANK = [
+  {q:"日本の首都は？", a:["大阪","京都","東京","名古屋"], correct:2},
+  {q:"富士山の標高で最も近いのは？", a:["2,776m","3,776m","4,176m","3,276m"], correct:1},
+  {q:"テニスで0点を何と言う？", a:["ゼロ","ノーカウント","ラブ","ドーナツ"], correct:2},
+  {q:"『モナ・リザ』を描いたのは？", a:["レオナルド・ダ・ヴィンチ","ミケランジェロ","ラファエロ","ボッティチェリ"], correct:0},
+  {q:"世界で最も話者が多い言語は？", a:["英語","スペイン語","中国語(普通話)","ヒンディー語"], correct:2},
+];
+
+async function importQuestionsFromFile(file){
+  const text = await file.text();
+  const isJSON = file.name.toLowerCase().endsWith('.json');
+  return parseQuestions(text, isJSON);
+}
+function parseQuestions(input, isJSON=false){
+  try{
+    if(isJSON){ return normalizeArray(JSON.parse(input)); }
+    const lines = input.replaceAll('\r','').split('\n').filter(l=>l.trim()!=='');
+    const rows  = lines.map(l=> splitCsvLine(l));
+    if(rows.length && String(rows[0][0]).toLowerCase().includes('question')) rows.shift();
+    const arr = rows.map(c=>({ q:c[0], a:[c[1],c[2],c[3],c[4]], correct:Number(c[5])-1 }));
+    return normalizeArray(arr);
+  }catch(e){ alert('読み込みに失敗しました: '+e.message); return []; }
+}
+function splitCsvLine(line){
+  const out=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; }
+    else if(ch===',' && !inQ){ out.push(cur); cur=''; }
+    else{ cur+=ch; }
+  }
+  out.push(cur); return out.map(s=>s.trim());
+}
+function normalizeArray(arr){
+  return arr.filter(x=>x&&x.q&&x.a&&x.a.length===4&&Number.isInteger(x.correct))
+            .map(x=>({ q:String(x.q), a:[...x.a.map(String)], correct: Math.max(0,Math.min(3,Number(x.correct))) }));
+}
+
+const $=(q)=>document.querySelector(q); const byId=(id)=>document.getElementById(id);
+const screens={ start:byId('screen-start'), share:byId('screen-share'), play:byId('screen-play'), result:byId('screen-result') };
+const els={ counter:byId('counter'), timer:byId('timer'), bar:byId('bar'), qtext:byId('qtext'), choices:byId('choices'), feedback:byId('feedback'), next:byId('btn-next'), skip:byId('btn-skip'), summary:byId('summary'), best:byId('best'), rate:byId('rate'), startBtn:byId('btn-start'), restartBtn:byId('btn-restart'), optTimer:byId('opt-timer'), optSeconds:byId('opt-seconds'), optCount:byId('opt-count') };
+const state={ deck:[], index:0, score:0, answered:false, timerOn:true, seconds:15, left:15, count:5, tickId:null };
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function show(screen){ Object.values(screens).forEach(s=>s.hidden=true); screens[screen].hidden=false; }
+function formatRate(ok,total){ if(total===0) return '—'; return Math.round((ok/total)*100)+'%'; }
+
+els.startBtn.addEventListener('click', ()=>{
+  state.timerOn = els.optTimer.checked; state.seconds = Number(els.optSeconds.value); state.count = Number(els.optCount.value);
+
+  if (window.__SHARED_DECK?.length) {
+    state.deck = window.__SHARED_DECK.map(item=>({ mode:'fixed',
+      q:item.q,
+      choices: item.a.map((t,idx)=>({ t, fixedIndex: idx })),
+      correctFixed: (item.correctIndex||1)-1
+    }));
+    state.index=0; state.score=0; startQuestion(); show('play'); return;
+  }
+
+  const source = window.__IMPORTED_QUESTIONS?.length ? window.__IMPORTED_QUESTIONS : QUESTION_BANK;
+  state.deck = shuffle([...source]).slice(0, state.count).map(q=>({ mode:'random', q:q.q,
+    choices: shuffle(q.a.map((t, idx)=>({ t, idxOriginal: idx }))),
+    correct: q.correct
+  }));
+
+  const serial = serializeDeck(state.deck);
+  const url = buildShareUrl(serial);
+  setupShareUI(url);
+  show('share');
+});
+
+const fileBtn=byId('btn-file'), fileInput=byId('file-input');
+fileBtn.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change', async (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const arr=await importQuestionsFromFile(f);
+  if(arr.length){ window.__IMPORTED_QUESTIONS=arr; alert(`問題を${arr.length}件読み込みました`); }
+});
+const pasteBtn=byId('btn-paste');
+pasteBtn.addEventListener('click', async ()=>{
+  const txt=prompt('CSV または JSON を貼り付けてください'); if(!txt) return;
+  const looksJSON = txt.trim().startsWith('[')||txt.trim().startsWith('{');
+  const arr=parseQuestions(txt, looksJSON);
+  if(arr.length){ window.__IMPORTED_QUESTIONS=arr; alert(`問題を${arr.length}件読み込みました`); }
+});
+
+function startQuestion(){
+  clearInterval(state.tickId); state.answered=false;
+  const q = state.deck[state.index];
+  els.counter.textContent = `${state.index+1}/${state.deck.length}`;
+  els.qtext.textContent = q.q; els.feedback.textContent='選択肢をクリック（または 1〜4）'; els.next.disabled=true;
+  els.bar.style.width = Math.round((state.index/state.deck.length)*100) + '%';
+  els.choices.innerHTML='';
+
+  q.choices.forEach((opt, idx)=>{
+    const btn=document.createElement('button'); btn.className='choice kbd'; btn.dataset.key=idx+1; btn.textContent=opt.t;
+    const isCorrect = q.mode==='fixed' ? (opt.fixedIndex === q.correctFixed) : (opt.idxOriginal === q.correct);
+    btn.addEventListener('click',()=>choose(isCorrect, btn));
+    els.choices.appendChild(btn);
+  });
+
+  if(state.timerOn){
+    state.left=state.seconds; els.timer.textContent=state.left+'s'; els.timer.hidden=false;
+    state.tickId=setInterval(()=>{ state.left--; els.timer.textContent=state.left+'s';
+      if(state.left<=0){ clearInterval(state.tickId); lockChoices(); els.feedback.textContent='時間切れ…'; els.next.disabled=false; } },1000);
+  }else{ els.timer.hidden=true; }
+
+  els.skip.onclick=()=>{ clearInterval(state.tickId); lockChoices(); els.feedback.textContent='スキップしました'; els.next.disabled=false; };
+  window.onkeydown=(e)=>{ if(screens.play.hidden) return; const n=Number(e.key); if(!Number.isInteger(n)||n<1||n>4) return;
+    const btn=els.choices.children[n-1]; if(btn) btn.click(); };
+  els.next.onclick=()=>{ state.index++; if(state.index>=state.deck.length) finish(); else startQuestion(); };
+}
+
+function choose(correct, btn){
+  if(state.answered) return; state.answered=true; clearInterval(state.tickId); lockChoices();
+  btn.classList.add(correct?'correct':'wrong'); if(correct){ els.feedback.textContent='正解！'; state.score++; } else { els.feedback.textContent='残念…'; }
+  els.next.disabled=false;
+}
+function lockChoices(){ [...els.choices.children].forEach(ch=>ch.disabled=true); }
+
+function finish(){
+  els.bar.style.width='100%'; const total=state.deck.length;
+  els.summary.textContent=`あなたのスコアは ${state.score}/${total}`; els.rate.textContent=formatRate(state.score,total);
+  const key='quiz-best'; const best=Number(localStorage.getItem(key)||0);
+  if(state.score>best){ localStorage.setItem(key,String(state.score)); els.best.textContent=`${state.score}（更新！）`; } else { els.best.textContent=String(best); }
+  show('result');
+}
+
+function serializeDeck(deck){
+  return deck.map(q=>{
+    let correctIndex=1;
+    if(q.mode==='fixed'){
+      correctIndex = q.correctFixed+1;
+      return { q:q.q, a:q.choices.map(x=>x.t), correctIndex };
+    } else {
+      const idx = q.choices.findIndex(c=>c.idxOriginal===q.correct);
+      correctIndex = (idx>=0? idx:0) + 1;
+      return { q:q.q, a:q.choices.map(x=>x.t), correctIndex };
+    }
+  });
+}
+function encodeBase64Url(utf8){
+  const bin = new TextEncoder().encode(utf8);
+  let s=''; for(let i=0;i<bin.length;i++) s+=String.fromCharCode(bin[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeBase64Url(b64url){
+  let b64=b64url.replace(/-/g,'+').replace(/_/g,'/'); const pad=b64.length%4; if(pad) b64+='='.repeat(4-pad);
+  const bin=atob(b64); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function buildShareUrl(serial){
+  const payload = encodeBase64Url(JSON.stringify({ deck: serial }));
+  const base = location.origin+location.pathname;
+  return base + '?deck=' + payload;
+}
+function parseDeckFromUrl(){
+  const p = new URLSearchParams(location.search).get('deck');
+  if(!p) return null;
+  try{ const json=decodeBase64Url(p); const obj=JSON.parse(json); if(Array.isArray(obj.deck)) return obj.deck; } catch(e){}
+  return null;
+}
+function setupShareUI(url){
+  const input = byId('share-url'); input.value = url;
+  const img = byId('qr');
+  img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=320x320&chl=' + encodeURIComponent(url);
+  const warn = byId('file-warning'); warn.hidden = (location.protocol !== 'file:');
+  byId('btn-copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(url); byId('share-note').textContent='リンクをコピーしました'; }catch{} };
+  byId('btn-share-start').onclick = ()=>{ startQuestion(); show('play'); };
+  byId('btn-share-skip').onclick = ()=>{ startQuestion(); show('play'); };
+}
+(function initShared(){
+  const deck = parseDeckFromUrl();
+  if(deck){ window.__SHARED_DECK = deck;
+    const p = document.createElement('p'); p.className='small muted';
+    p.textContent = `共有された問題セットを検出しました（${deck.length}問）。「スタート」で同じセットを開始できます。`;
+    document.getElementById('screen-start').appendChild(p);
+  }
+})();
+</script>
+</body>
+</html>
