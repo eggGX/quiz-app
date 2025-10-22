@@ -184,7 +184,7 @@
   function parseQuestions(input, isJSON=false){
     try{
       if(isJSON){ return normalizeArray(JSON.parse(input)); }
-      const lines = input.replaceAll('\r','').split('\n').filter(l => l.trim() !== '');
+      const lines = input.split('\r').join('').split('\n').filter(l => l.trim() !== '');
       const rows  = lines.map(l => splitCsvLine(l));
       if(rows.length && String(rows[0][0]).toLowerCase().includes('question')) rows.shift();
       const arr = rows.map(c => ({ q:c[0], a:[c[1],c[2],c[3],c[4]], correct:Number(c[5]) - 1 }));
