@@ -75,7 +75,10 @@
                   <span class="share-link__label">参加用URL</span>
                   <code id="startShareUrl" class="share-link__value" tabindex="0"></code>
                 </div>
-                <button id="copyStartShareButton" class="ghost-button" type="button">共有リンクをコピー</button>
+                <div class="share-tools">
+                  <button id="refreshStartShareButton" class="ghost-button" type="button">最新ランキングを読み込む</button>
+                  <button id="copyStartShareButton" class="ghost-button" type="button">共有リンクをコピー</button>
+                </div>
                 <p class="card__note">リンクを共有するだけでスコアが一つのランキングにまとまります。</p>
               </footer>
             </aside>
@@ -165,6 +168,7 @@
             <footer class="card__footer">
               <div class="share-tools">
                 <button id="copyResultShareButton" class="primary-button" type="button">ランキングリンクをコピー</button>
+                <button id="refreshResultShareButton" class="ghost-button" type="button">最新ランキングを読み込む</button>
                 <button id="downloadResultButton" class="ghost-button" type="button">CSVで保存</button>
               </div>
               <div class="share-link share-link--result">

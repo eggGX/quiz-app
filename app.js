@@ -174,6 +174,7 @@ const elements = {
   setupForm: document.getElementById("setupForm"),
   startRankingList: document.getElementById("startRankingList"),
   activeSessionLabel: document.getElementById("activeSessionLabel"),
+  refreshStartShare: document.getElementById("refreshStartShareButton"),
   copyStartShare: document.getElementById("copyStartShareButton"),
   startShareUrl: document.getElementById("startShareUrl"),
   questionBadge: document.getElementById("questionBadge"),
@@ -194,6 +195,7 @@ const elements = {
   resultRankingBody: document.getElementById("resultRankingBody"),
   copyResultShare: document.getElementById("copyResultShareButton"),
   downloadResult: document.getElementById("downloadResultButton"),
+  refreshResultShare: document.getElementById("refreshResultShareButton"),
   resultShareUrl: document.getElementById("resultShareUrl"),
   playAgain: document.getElementById("playAgainButton"),
   returnStart: document.getElementById("returnStartButton"),
@@ -223,7 +225,7 @@ init();
 
 function init() {
   hydrateTheme();
-  hydrateFromUrl();
+  const initialHydration = hydrateFromUrl();
   if (!validateElements()) {
     return;
   }
@@ -231,7 +233,12 @@ function init() {
   ensureSessionId();
   bindEvents();
   updateStartSessionPreview();
-  updateShareLink();
+  if (initialHydration.session) {
+    updateShareLink(initialHydration.session);
+    refreshResultView(initialHydration.session);
+  } else {
+    updateShareLink();
+  }
   updateThemeButton();
 }
 
@@ -245,6 +252,7 @@ function validateElements() {
     ["question count", elements.questionCount],
     ["start ranking list", elements.startRankingList],
     ["start share url", elements.startShareUrl],
+    ["refresh start share button", elements.refreshStartShare],
     ["copy start share button", elements.copyStartShare],
     ["active session label", elements.activeSessionLabel],
     ["question badge", elements.questionBadge],
@@ -264,6 +272,7 @@ function validateElements() {
     ["result session label", elements.resultSessionLabel],
     ["result share url", elements.resultShareUrl],
     ["copy result share button", elements.copyResultShare],
+    ["refresh result share button", elements.refreshResultShare],
     ["download result button", elements.downloadResult],
     ["play again button", elements.playAgain],
     ["return start button", elements.returnStart],
@@ -319,10 +328,20 @@ function showCriticalError(details) {
 
 function bindEvents() {
   elements.setupForm.addEventListener("submit", handleSetupSubmit);
+  if (elements.refreshStartShare) {
+    elements.refreshStartShare.addEventListener("click", () =>
+      refreshFromShareLink({ showIfUnchanged: true, announceIfMissing: true })
+    );
+  }
   elements.copyStartShare.addEventListener("click", () => copyShareLink());
   elements.skipButton.addEventListener("click", handleSkipQuestion);
   elements.copyResultShare.addEventListener("click", () => copyShareLink());
   elements.downloadResult.addEventListener("click", handleDownloadCsv);
+  if (elements.refreshResultShare) {
+    elements.refreshResultShare.addEventListener("click", () =>
+      refreshFromShareLink({ showIfUnchanged: true, announceIfMissing: true })
+    );
+  }
   elements.playAgain.addEventListener("click", handlePlayAgain);
   elements.returnStart.addEventListener("click", () => switchView("start"));
   elements.viewRankingButton.addEventListener("click", openRankingDialog);
@@ -330,6 +349,57 @@ function bindEvents() {
   elements.rankingDialog.addEventListener("close", () => {
     elements.dialogRankingList.innerHTML = "";
   });
+  window.addEventListener("hashchange", handleHashChange);
+  window.addEventListener("storage", handleStorageChange);
+}
+
+function handleHashChange() {
+  refreshFromShareLink({ showIfUnchanged: false, announceIfMissing: true });
+}
+
+function handleStorageChange(event) {
+  if (!event.key || !event.key.startsWith(STORAGE_PREFIX)) return;
+  const sessionId = sanitizeSessionId(event.key.slice(STORAGE_PREFIX.length));
+  if (!sessionId || sessionId !== state.sessionId) return;
+  const session = readSession(sessionId);
+  updateStartSessionPreview();
+  updateShareLink(session);
+  refreshResultView(session);
+  showInlineToast("ほかの画面で更新されたランキングを取り込みました");
+}
+
+function refreshFromShareLink({ showIfUnchanged = false, announceIfMissing = false } = {}) {
+  const hydration = hydrateFromUrl();
+  if (!hydration.session) {
+    if (announceIfMissing) {
+      showInlineToast("共有リンクが読み込めませんでした");
+    }
+    ensureSessionId();
+    updateStartSessionPreview();
+    updateShareLink();
+    refreshResultView();
+    return;
+  }
+
+  ensureSessionId();
+  updateStartSessionPreview();
+  updateShareLink(hydration.session);
+  refreshResultView(hydration.session);
+
+  if (hydration.updated) {
+    showInlineToast("共有リンクから最新のランキングを読み込みました");
+  } else if (showIfUnchanged) {
+    showInlineToast("共有リンクは最新の状態です");
+  }
+}
+
+function refreshResultView(session) {
+  if (!elements.views.result.classList.contains("view--active")) {
+    return;
+  }
+  const activeSession = session ?? readSession(state.sessionId);
+  elements.resultSessionLabel.textContent = formatParticipationLabel(activeSession);
+  renderRankingTable(activeSession.scoreboard);
 }
 
 function ensureSessionId() {
@@ -641,10 +711,12 @@ function mergeScoreIntoSession(sessionId, entry) {
     scoreboard: sortEntries(merged).slice(0, MAX_SESSION_HISTORY),
     updatedAt: new Date().toISOString(),
   };
-  writeSession(session);
+  const stored = writeSession(session);
+  state.sessionId = stored.sessionId;
   updateStartSessionPreview();
-  updateShareLink(session);
-  return session;
+  updateShareLink(stored);
+  refreshResultView(stored);
+  return stored;
 }
 
 function mergeEntries(current, incoming) {
@@ -669,18 +741,40 @@ function sortEntries(entries) {
   });
 }
 
+function areScoreboardsEqual(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i];
+    const right = b[i];
+    if (!right) return false;
+    if (
+      left.id !== right.id ||
+      left.name !== right.name ||
+      left.score !== right.score ||
+      left.correct !== right.correct ||
+      left.total !== right.total ||
+      left.timeMs !== right.timeMs ||
+      left.playedAt !== right.playedAt
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function readSession(sessionId) {
   const key = STORAGE_PREFIX + sessionId;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return { sessionId, scoreboard: [], updatedAt: null };
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.scoreboard)) {
-      return { sessionId, scoreboard: [], updatedAt: null };
-    }
+    const scoreboard = Array.isArray(parsed.scoreboard)
+      ? sortEntries(parsed.scoreboard).slice(0, MAX_SESSION_HISTORY)
+      : [];
     return {
       sessionId,
-      scoreboard: parsed.scoreboard,
+      scoreboard,
       updatedAt: parsed.updatedAt ?? null,
     };
   } catch (error) {
@@ -691,11 +785,17 @@ function readSession(sessionId) {
 
 function writeSession(session) {
   const key = STORAGE_PREFIX + session.sessionId;
+  const payload = {
+    sessionId: session.sessionId,
+    scoreboard: sortEntries(session.scoreboard).slice(0, MAX_SESSION_HISTORY),
+    updatedAt: session.updatedAt ?? new Date().toISOString(),
+  };
   try {
-    localStorage.setItem(key, JSON.stringify(session));
+    localStorage.setItem(key, JSON.stringify(payload));
   } catch (error) {
     console.warn("Failed to store session", error);
   }
+  return payload;
 }
 
 function updateShareLink(session) {
@@ -782,22 +882,36 @@ function decodeSharePayload(value) {
 }
 
 function hydrateFromUrl() {
-  if (!location.hash) return;
+  if (!location.hash) return { updated: false, session: null };
   const params = new URLSearchParams(location.hash.slice(1));
   const boardParam = params.get("board");
-  if (!boardParam) return;
+  if (!boardParam) return { updated: false, session: null };
   const payload = decodeSharePayload(boardParam);
-  if (!payload) return;
+  if (!payload) return { updated: false, session: null };
   const baseSessionId = sanitizeSessionId(payload.sessionId) || generateSessionId();
   const existing = readSession(baseSessionId);
-  const merged = mergeEntries(existing.scoreboard, payload.scoreboard || []);
+  const merged = sortEntries(mergeEntries(existing.scoreboard, payload.scoreboard || [])).slice(0, MAX_SESSION_HISTORY);
+  const candidateTimes = [payload.updatedAt, existing.updatedAt]
+    .map((value) => {
+      const time = value ? Date.parse(value) : NaN;
+      return Number.isFinite(time) ? time : null;
+    })
+    .filter((time) => time !== null);
+  const updatedAt =
+    candidateTimes.length > 0 ? new Date(Math.max(...candidateTimes)).toISOString() : new Date().toISOString();
   const session = {
     sessionId: baseSessionId,
-    scoreboard: sortEntries(merged),
-    updatedAt: payload.updatedAt ?? new Date().toISOString(),
+    scoreboard: merged,
+    updatedAt,
   };
-  writeSession(session);
-  state.sessionId = session.sessionId;
+  const changed =
+    baseSessionId !== state.sessionId ||
+    !areScoreboardsEqual(merged, existing.scoreboard) ||
+    (updatedAt ?? "") !== (existing.updatedAt ?? "");
+  const shouldPersist = changed || (!existing.updatedAt && !existing.scoreboard.length);
+  const stored = shouldPersist ? writeSession(session) : session;
+  state.sessionId = stored.sessionId;
+  return { updated: changed, session: stored };
 }
 
 function hydrateLastSession() {
