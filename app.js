@@ -3,6 +3,7 @@ const STORAGE_PREFIX = "quizSolo.session:";
 const LAST_SESSION_KEY = "quizSolo.lastSession";
 const SCORE_PER_CORRECT = 10;
 const MAX_SESSION_HISTORY = 150;
+const THEME_STORAGE_KEY = "quizSolo.theme";
 
 const FALLBACK_QUESTIONS = [
   {
@@ -223,6 +224,7 @@ init();
 function init() {
   hydrateFromUrl();
   hydrateLastSession();
+  hydrateTheme();
   bindEvents();
   updateStartSessionPreview();
   updateThemeButton();
@@ -889,8 +891,29 @@ function updateThemeButton() {
 }
 
 function toggleTheme() {
-  document.documentElement.classList.toggle("dark");
+  const root = document.documentElement;
+  const isDark = root.classList.toggle("dark");
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, isDark ? "dark" : "light");
+  } catch (error) {
+    console.warn("Failed to persist theme", error);
+  }
   updateThemeButton();
+}
+
+function hydrateTheme() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(THEME_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Failed to read theme", error);
+  }
+  const prefersDark =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+      : false;
+  const shouldUseDark = stored ? stored === "dark" : prefersDark;
+  document.documentElement.classList.toggle("dark", shouldUseDark);
 }
 
 // basic toast styles
