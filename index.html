@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>クイズソロバトル</title>
+    <title>メロウクイズラリー</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,10 +16,10 @@
     <div class="app-shell">
       <header class="app-header">
         <div class="brand">
-          <span class="brand__icon" aria-hidden="true">✦</span>
+          <span class="brand__icon" aria-hidden="true">✶</span>
           <div class="brand__text">
-            <h1 class="brand__title">クイズソロバトル</h1>
-            <p class="brand__subtitle">ひとりで挑んで、みんなで競うランキング</p>
+            <h1 class="brand__title">メロウクイズラリー</h1>
+            <p class="brand__subtitle">ひとりで挑んで、リンクでつながるランキング</p>
           </div>
           <span id="countdown" aria-label="残り時間">20s</span>
         </div>
@@ -39,7 +39,7 @@
             <div class="card card--padded">
               <h2 id="startHeading" class="card__title">準備しましょう</h2>
               <p class="card__description">
-                名前を入力して出題数を選ぶだけ。セッションコードを共有すれば、別端末のスコアもひとつのランキングにまとまります。
+                名前を入力して出題数を選ぶだけ。このページの共有リンクからアクセスすれば、離れた端末でも同じランキングが表示されます。
               </p>
 
               <form id="setupForm" class="form-grid" novalidate>
@@ -59,17 +59,6 @@
                   </select>
                 </label>
 
-                <fieldset class="form-field">
-                  <legend class="form-field__label">セッションコード</legend>
-                  <div class="session-field">
-                    <input id="sessionCode" name="sessionCode" type="text" inputmode="latin" maxlength="12" placeholder="例: SAKURA12" aria-describedby="sessionHint" />
-                    <button id="generateSessionButton" class="ghost-button" type="button">新しく作成</button>
-                  </div>
-                  <p id="sessionHint" class="form-field__hint">
-                    みんなで同じコードを使うとランキングが共有されます。空欄なら自動生成します。
-                  </p>
-                </fieldset>
-
                 <div class="form-actions">
                   <button class="primary-button" type="submit">クイズを始める</button>
                 </div>
@@ -83,8 +72,12 @@
               </header>
               <ol id="startRankingList" class="ranking-list"></ol>
               <footer class="card__footer">
+                <div class="share-link">
+                  <span class="share-link__label">参加用URL</span>
+                  <code id="startShareUrl" class="share-link__value" tabindex="0"></code>
+                </div>
                 <button id="copyStartShareButton" class="ghost-button" type="button">共有リンクをコピー</button>
-                <p class="card__note">同じリンクでアクセスすれば別端末でも同じランキングが表示されます。</p>
+                <p class="card__note">リンクを共有するだけでスコアが一つのランキングにまとまります。</p>
               </footer>
             </aside>
           </div>
@@ -145,14 +138,14 @@
               </div>
             </div>
             <div class="result-actions">
-              <button id="playAgainButton" class="primary-button" type="button">同じセッションでもう一度</button>
+              <button id="playAgainButton" class="primary-button" type="button">同じランキングでもう一度</button>
               <button id="returnStartButton" class="ghost-button" type="button">スタートに戻る</button>
             </div>
           </div>
 
           <div class="card card--padded result-ranking">
             <header class="card__header">
-              <h3 class="card__title">セッションランキング</h3>
+              <h3 class="card__title">みんなのランキング</h3>
               <span id="resultSessionLabel" class="badge"></span>
             </header>
             <div class="table-wrapper">
@@ -175,6 +168,10 @@
                 <button id="copyResultShareButton" class="primary-button" type="button">ランキングリンクをコピー</button>
                 <button id="downloadResultButton" class="ghost-button" type="button">CSVで保存</button>
               </div>
+              <div class="share-link share-link--result">
+                <span class="share-link__label">共有URL</span>
+                <code id="resultShareUrl" class="share-link__value" tabindex="0"></code>
+              </div>
               <p class="card__note">
                 共有リンクを別端末で開いてプレイすると、同じランキングに結果が追加されます。
               </p>
@@ -187,12 +184,11 @@
         <small>みんなの挑戦を記録して、最高のスコアを目指しましょう！</small>
       </footer>
     </div>
-  </template>
 
     <dialog id="rankingDialog" class="ranking-dialog">
       <form method="dialog" class="ranking-dialog__card">
         <header>
-          <h2>セッションランキング</h2>
+          <h2>みんなのランキング</h2>
         </header>
         <div class="ranking-dialog__content">
           <p id="dialogSessionLabel" class="badge"></p>

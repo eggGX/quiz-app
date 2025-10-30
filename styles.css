@@ -261,14 +261,35 @@ body {
   transform: translateY(1px);
 }
 
-.session-field {
+
+.share-link {
   display: flex;
-  gap: 0.6rem;
   flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
-.session-field input {
-  flex: 1 1 200px;
+.share-link--result {
+  margin-top: 0.75rem;
+}
+
+.share-link__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.share-link__value {
+  font-family: "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "Noto Sans Mono", monospace;
+  font-size: 0.85rem;
+  background: rgba(129, 89, 255, 0.12);
+  color: var(--text-strong);
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.75rem;
+  word-break: break-all;
+  line-height: 1.5;
+  max-width: 100%;
 }
 
 .ranking-list {

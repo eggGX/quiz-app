@@ -171,12 +171,11 @@ const elements = {
   },
   playerName: document.getElementById("playerName"),
   questionCount: document.getElementById("questionCount"),
-  sessionCode: document.getElementById("sessionCode"),
   setupForm: document.getElementById("setupForm"),
-  generateSession: document.getElementById("generateSessionButton"),
   startRankingList: document.getElementById("startRankingList"),
   activeSessionLabel: document.getElementById("activeSessionLabel"),
   copyStartShare: document.getElementById("copyStartShareButton"),
+  startShareUrl: document.getElementById("startShareUrl"),
   questionBadge: document.getElementById("questionBadge"),
   questionTitle: document.getElementById("questionTitle"),
   questionText: document.getElementById("questionText"),
@@ -195,6 +194,7 @@ const elements = {
   resultRankingBody: document.getElementById("resultRankingBody"),
   copyResultShare: document.getElementById("copyResultShareButton"),
   downloadResult: document.getElementById("downloadResultButton"),
+  resultShareUrl: document.getElementById("resultShareUrl"),
   playAgain: document.getElementById("playAgainButton"),
   returnStart: document.getElementById("returnStartButton"),
   viewRankingButton: document.getElementById("viewRankingButton"),
@@ -222,17 +222,18 @@ const state = {
 init();
 
 function init() {
+  hydrateTheme();
   hydrateFromUrl();
   hydrateLastSession();
-  hydrateTheme();
+  ensureSessionId();
   bindEvents();
   updateStartSessionPreview();
+  updateShareLink();
   updateThemeButton();
 }
 
 function bindEvents() {
   elements.setupForm.addEventListener("submit", handleSetupSubmit);
-  elements.generateSession.addEventListener("click", handleGenerateSession);
   elements.copyStartShare.addEventListener("click", () => copyShareLink());
   elements.skipButton.addEventListener("click", handleSkipQuestion);
   elements.copyResultShare.addEventListener("click", () => copyShareLink());
@@ -241,22 +242,17 @@ function bindEvents() {
   elements.returnStart.addEventListener("click", () => switchView("start"));
   elements.viewRankingButton.addEventListener("click", openRankingDialog);
   elements.switchThemeButton.addEventListener("click", toggleTheme);
-  elements.sessionCode.addEventListener("input", handleSessionInputChange);
   elements.rankingDialog.addEventListener("close", () => {
     elements.dialogRankingList.innerHTML = "";
   });
 }
 
-function handleSessionInputChange() {
-  const sessionId = normalizeSessionId(elements.sessionCode.value || state.sessionId);
-  updateStartSessionPreview(sessionId);
-}
-
-function handleGenerateSession() {
-  const id = generateSessionId();
-  elements.sessionCode.value = id;
-  state.sessionId = id;
-  updateStartSessionPreview(id);
+function ensureSessionId() {
+  state.sessionId = sanitizeSessionId(state.sessionId) || generateSessionId();
+  const existing = readSession(state.sessionId);
+  if (!existing.updatedAt && existing.scoreboard.length === 0) {
+    writeSession(existing);
+  }
 }
 
 async function handleSetupSubmit(event) {
@@ -267,12 +263,8 @@ async function handleSetupSubmit(event) {
     return;
   }
   const totalCount = Number(elements.questionCount.value) || 10;
-  const sessionId = normalizeSessionId(
-    elements.sessionCode.value || state.sessionId || generateSessionId()
-  );
-
+  const sessionId = sanitizeSessionId(state.sessionId) || generateSessionId();
   state.sessionId = sessionId;
-  elements.sessionCode.value = sessionId;
   state.questionIndex = 0;
   state.correct = 0;
   state.score = 0;
@@ -414,7 +406,7 @@ function renderResults(entry, session) {
   elements.finalScore.textContent = entry.score.toString();
   elements.finalCorrect.textContent = `${entry.correct} / ${entry.total}`;
   elements.finalTime.textContent = formatTime(entry.timeMs);
-  elements.resultSessionLabel.textContent = `#${session.sessionId}`;
+  elements.resultSessionLabel.textContent = formatParticipationLabel(session);
 
   renderRankingTable(session.scoreboard);
 }
@@ -536,6 +528,13 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("ja-JP", options).format(date);
 }
 
+function formatParticipationLabel(session) {
+  const count = session?.scoreboard?.length ?? 0;
+  if (count <= 0) return "まだ記録がありません";
+  if (count === 1) return "1人の記録";
+  return `${count}人の記録`;
+}
+
 function buildScoreEntry({ name, score, correct, total, timeMs }) {
   const canUseRandomUuid = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function";
   return {
@@ -558,7 +557,8 @@ function mergeScoreIntoSession(sessionId, entry) {
     updatedAt: new Date().toISOString(),
   };
   writeSession(session);
-  updateStartSessionPreview(sessionId);
+  updateStartSessionPreview();
+  updateShareLink(session);
   return session;
 }
 
@@ -613,19 +613,41 @@ function writeSession(session) {
   }
 }
 
+function updateShareLink(session) {
+  if (!state.sessionId && !session?.sessionId) {
+    return `${location.origin}${location.pathname}`;
+  }
+  const activeSession = session ?? readSession(state.sessionId);
+  state.sessionId = activeSession.sessionId;
+  const payload = encodeSharePayload(activeSession);
+  const hash = `#board=${payload}`;
+  if (location.hash !== hash) {
+    try {
+      history.replaceState(null, "", hash);
+    } catch (error) {
+      location.hash = hash;
+    }
+  }
+  const url = `${location.origin}${location.pathname}${hash}`;
+  if (elements.startShareUrl) {
+    elements.startShareUrl.textContent = url;
+    elements.startShareUrl.setAttribute("title", url);
+  }
+  if (elements.resultShareUrl) {
+    elements.resultShareUrl.textContent = url;
+    elements.resultShareUrl.setAttribute("title", url);
+  }
+  return url;
+}
+
 function copyShareLink() {
-  const sessionId = normalizeSessionId(
-    elements.sessionCode.value || state.sessionId || generateSessionId()
-  );
-  if (!sessionId) {
-    showInlineToast("セッションコードを用意できませんでした");
+  ensureSessionId();
+  if (!state.sessionId) {
+    showInlineToast("共有リンクを用意できませんでした");
     return;
   }
-  elements.sessionCode.value = sessionId;
-  state.sessionId = sessionId;
-  const session = readSession(sessionId);
-  const payload = encodeSharePayload(session);
-  const url = `${location.origin}${location.pathname}#session=${encodeURIComponent(sessionId)}&board=${payload}`;
+  const session = readSession(state.sessionId);
+  const url = updateShareLink(session);
   if (navigator.clipboard?.writeText) {
     navigator.clipboard
       .writeText(url)
@@ -671,45 +693,33 @@ function decodeSharePayload(value) {
 function hydrateFromUrl() {
   if (!location.hash) return;
   const params = new URLSearchParams(location.hash.slice(1));
-  const sessionId = normalizeSessionId(params.get("session"));
   const boardParam = params.get("board");
-  if (boardParam) {
-    const payload = decodeSharePayload(boardParam);
-    if (payload) {
-      const baseSessionId = payload.sessionId || sessionId || generateSessionId();
-      const existing = readSession(baseSessionId);
-      const merged = mergeEntries(existing.scoreboard, payload.scoreboard);
-      const session = {
-        sessionId: baseSessionId,
-        scoreboard: sortEntries(merged),
-        updatedAt: payload.updatedAt ?? new Date().toISOString(),
-      };
-      writeSession(session);
-      if (sessionId && sessionId !== session.sessionId) {
-        const alias = { ...session, sessionId };
-        writeSession(alias);
-      }
-      state.sessionId = session.sessionId;
-      elements.sessionCode.value = session.sessionId;
-    }
-  } else if (sessionId) {
-    elements.sessionCode.value = sessionId;
-    state.sessionId = sessionId;
-  }
+  if (!boardParam) return;
+  const payload = decodeSharePayload(boardParam);
+  if (!payload) return;
+  const baseSessionId = sanitizeSessionId(payload.sessionId) || generateSessionId();
+  const existing = readSession(baseSessionId);
+  const merged = mergeEntries(existing.scoreboard, payload.scoreboard || []);
+  const session = {
+    sessionId: baseSessionId,
+    scoreboard: sortEntries(merged),
+    updatedAt: payload.updatedAt ?? new Date().toISOString(),
+  };
+  writeSession(session);
+  state.sessionId = session.sessionId;
 }
 
 function hydrateLastSession() {
-  if (state.sessionId) return;
   try {
     const raw = localStorage.getItem(LAST_SESSION_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
-    if (parsed?.sessionId) {
-      state.sessionId = parsed.sessionId;
-      elements.sessionCode.value = parsed.sessionId;
-      if (parsed?.name) {
-        elements.playerName.value = parsed.name;
-      }
+    const storedId = sanitizeSessionId(parsed?.sessionId);
+    if (!state.sessionId && storedId) {
+      state.sessionId = storedId;
+    }
+    if (parsed?.name) {
+      elements.playerName.value = parsed.name;
     }
   } catch (error) {
     console.warn("Failed to hydrate last session", error);
@@ -718,20 +728,21 @@ function hydrateLastSession() {
 
 function persistLastSession(sessionId, name) {
   try {
-    localStorage.setItem(LAST_SESSION_KEY, JSON.stringify({ sessionId, name }));
+    const sanitized = sanitizeSessionId(sessionId);
+    localStorage.setItem(LAST_SESSION_KEY, JSON.stringify({ sessionId: sanitized, name }));
   } catch (error) {
     console.warn("Failed to persist last session", error);
   }
 }
 
-function updateStartSessionPreview(sessionId = normalizeSessionId(elements.sessionCode.value || state.sessionId)) {
-  if (!sessionId) {
-    elements.activeSessionLabel.textContent = "セッション未設定";
+function updateStartSessionPreview() {
+  if (!state.sessionId) {
+    elements.activeSessionLabel.textContent = "共有準備中";
     elements.startRankingList.innerHTML = "";
     return;
   }
-  const session = readSession(sessionId);
-  elements.activeSessionLabel.textContent = `#${sessionId}`;
+  const session = readSession(state.sessionId);
+  elements.activeSessionLabel.textContent = formatParticipationLabel(session);
   elements.startRankingList.innerHTML = "";
   if (!session.scoreboard.length) {
     const empty = document.createElement("li");
@@ -755,13 +766,12 @@ function updateStartSessionPreview(sessionId = normalizeSessionId(elements.sessi
 }
 
 function openRankingDialog() {
-  const sessionId = normalizeSessionId(elements.sessionCode.value || state.sessionId);
-  if (!sessionId) {
-    showToast("セッションコードを設定してください");
+  if (!state.sessionId) {
+    showToast("共有リンクを準備しています");
     return;
   }
-  const session = readSession(sessionId);
-  elements.dialogSessionLabel.textContent = `#${sessionId}`;
+  const session = readSession(state.sessionId);
+  elements.dialogSessionLabel.textContent = formatParticipationLabel(session);
   elements.dialogRankingList.innerHTML = "";
   if (!session.scoreboard.length) {
     const empty = document.createElement("li");
@@ -788,12 +798,11 @@ function openRankingDialog() {
 }
 
 function handleDownloadCsv() {
-  const sessionId = normalizeSessionId(state.sessionId || elements.sessionCode.value);
-  if (!sessionId) {
-    showToast("セッションがありません");
+  if (!state.sessionId) {
+    showToast("共有リンクがまだありません");
     return;
   }
-  const session = readSession(sessionId);
+  const session = readSession(state.sessionId);
   if (!session.scoreboard.length) {
     showToast("ランキングが空です");
     return;
@@ -813,7 +822,7 @@ function handleDownloadCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${sessionId}_ranking.csv`;
+  link.download = `${state.sessionId}_ranking.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -825,8 +834,9 @@ function handlePlayAgain() {
   }
   elements.playerName.value = state.lastSetup.name;
   elements.questionCount.value = String(state.lastSetup.totalCount);
-  elements.sessionCode.value = state.lastSetup.sessionId;
-  updateStartSessionPreview(state.lastSetup.sessionId);
+  state.sessionId = state.lastSetup.sessionId;
+  updateStartSessionPreview();
+  updateShareLink();
   switchView("start");
   setTimeout(() => {
     elements.setupForm.requestSubmit();
@@ -866,7 +876,7 @@ function showInlineToast(message) {
   }, 2200);
 }
 
-function normalizeSessionId(value) {
+function sanitizeSessionId(value) {
   if (!value) return "";
   return value
     .toString()
