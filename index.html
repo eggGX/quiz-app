@@ -1,1210 +1,231 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>クイズ バトルアリーナ</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎉</text></svg>">
-  <style>
-    :root {
-      color-scheme: light dark;
-      --bg: #f2f5ff;
-      --bg-dark: #111425;
-      --panel: rgba(255, 255, 255, 0.82);
-      --panel-dark: rgba(18, 21, 41, 0.82);
-      --text: #283046;
-      --text-dark: #f9fbff;
-      --accent: #ff8fb1;
-      --accent-2: #a48bff;
-      --accent-3: #7ce5ff;
-      --muted: #6c7a99;
-      --muted-dark: #a8b5ff;
-      --shadow: 0 18px 45px rgba(82, 94, 136, 0.25);
-      --radius-xl: 28px;
-      --radius-lg: 20px;
-      --radius-md: 16px;
-      --font-heading: "Zen Maru Gothic", "Nunito", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-      --font-body: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Inter", system-ui, sans-serif;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #10132b;
-        --panel: rgba(21, 25, 46, 0.92);
-        --text: #f6f6ff;
-        --muted: #a6b4ff;
-        --shadow: 0 18px 55px rgba(6, 8, 25, 0.55);
-      }
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: var(--font-body);
-      color: var(--text);
-      background: var(--bg);
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      width: 420px;
-      height: 420px;
-      filter: blur(120px);
-      opacity: 0.55;
-      z-index: -2;
-    }
-
-    body::before {
-      background: linear-gradient(135deg, rgba(255, 143, 177, 0.95), rgba(164, 139, 255, 0.9));
-      top: -140px;
-      left: -140px;
-    }
-
-    body::after {
-      background: linear-gradient(135deg, rgba(124, 229, 255, 0.85), rgba(255, 215, 160, 0.85));
-      bottom: -160px;
-      right: -120px;
-    }
-
-    .app-shell {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: clamp(20px, 4vw, 48px) clamp(18px, 4vw, 48px) 80px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    header.app-header {
-      text-align: center;
-      background: linear-gradient(145deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.3));
-      border-radius: var(--radius-xl);
-      padding: clamp(18px, 4vw, 32px);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
-    }
-
-    header.app-header h1 {
-      margin: 0;
-      font-family: var(--font-heading);
-      font-size: clamp(26px, 5vw, 44px);
-      letter-spacing: 0.04em;
-    }
-
-    header.app-header p {
-      margin: 12px auto 0;
-      max-width: 520px;
-      line-height: 1.7;
-      color: var(--muted);
-      font-size: clamp(14px, 2.8vw, 16px);
-    }
-
-    .panel {
-      background: var(--panel);
-      backdrop-filter: blur(18px);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow);
-      padding: clamp(20px, 4vw, 36px);
-      display: none;
-      flex-direction: column;
-      gap: clamp(16px, 3vw, 28px);
-    }
-
-    .panel.active {
-      display: flex;
-    }
-
-    .panel h2 {
-      margin: 0;
-      font-family: var(--font-heading);
-      font-size: clamp(20px, 4vw, 30px);
-    }
-
-    .panel p.lead {
-      margin: 0;
-      line-height: 1.8;
-      color: var(--muted);
-    }
-
-    .player-form {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .player-form input[type="text"] {
-      flex: 1;
-      min-width: 180px;
-      padding: 12px 16px;
-      border-radius: var(--radius-md);
-      border: 2px solid rgba(120, 140, 200, 0.22);
-      background: rgba(255, 255, 255, 0.9);
-      font-size: 16px;
-      outline: none;
-    }
-
-    .player-form input[type="text"]:focus {
-      border-color: rgba(164, 139, 255, 0.65);
-      box-shadow: 0 0 0 4px rgba(164, 139, 255, 0.25);
-    }
-
-    .btn {
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 12px 20px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      letter-spacing: 0.02em;
-    }
-
-    .btn-primary {
-      background: linear-gradient(120deg, var(--accent), var(--accent-2));
-      color: #fff;
-      box-shadow: 0 14px 30px rgba(175, 150, 255, 0.4);
-    }
-
-    .btn-ghost {
-      background: rgba(255, 255, 255, 0.55);
-      color: var(--text);
-      border: 1px solid rgba(132, 148, 190, 0.28);
-      box-shadow: none;
-    }
-
-    .btn.buzz {
-      width: 100%;
-      font-size: clamp(15px, 3.4vw, 18px);
-      background: linear-gradient(120deg, rgba(255, 143, 177, 0.92), rgba(255, 195, 113, 0.92));
-      color: #fff;
-      border-radius: 999px;
-    }
-
-    .btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .btn:not(:disabled):hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px rgba(107, 135, 255, 0.32);
-    }
-
-    ul.player-list,
-    ul.score-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 12px;
-    }
-
-    ul.player-list li {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(255, 255, 255, 0.65);
-      border-radius: var(--radius-md);
-      padding: 12px 16px;
-      border: 1px solid rgba(164, 139, 255, 0.24);
-      font-weight: 600;
-    }
-
-    ul.player-list li button {
-      background: none;
-      border: none;
-      color: rgba(244, 92, 129, 0.88);
-      font-size: 22px;
-      line-height: 1;
-      cursor: pointer;
-      padding: 4px 10px;
-      border-radius: 999px;
-      transition: background 0.2s ease;
-    }
-
-    ul.player-list li button:hover {
-      background: rgba(244, 92, 129, 0.12);
-    }
-
-    .score-grid {
-      display: grid;
-      gap: 16px;
-    }
-
-    @media (min-width: 720px) {
-      .score-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      }
-    }
-
-    .score-card {
-      position: relative;
-      padding: 18px;
-      border-radius: var(--radius-lg);
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(164, 139, 255, 0.28);
-      box-shadow: 0 10px 26px rgba(122, 144, 210, 0.24);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
-    }
-
-    .score-card.active {
-      border: 2px solid rgba(255, 143, 177, 0.85);
-      box-shadow: 0 18px 32px rgba(255, 143, 177, 0.35);
-      transform: translateY(-4px);
-    }
-
-    .score-card .rank {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      font-size: 12px;
-      font-weight: 700;
-      color: rgba(94, 104, 152, 0.8);
-      background: rgba(255, 255, 255, 0.65);
-      padding: 4px 10px;
-      border-radius: 999px;
-    }
-
-    .score-card .name {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .score-card .score {
-      font-size: 32px;
-      font-weight: 800;
-      color: rgba(100, 117, 255, 0.95);
-    }
-
-    .score-card .meta {
-      margin-top: 8px;
-      font-size: 13px;
-      color: rgba(90, 101, 145, 0.75);
-    }
-
-    .question-area {
-      display: grid;
-      gap: 18px;
-    }
-
-    .question-bubble {
-      background: rgba(255, 255, 255, 0.8);
-      border-radius: var(--radius-lg);
-      padding: 18px 20px;
-      border: 1px solid rgba(148, 168, 230, 0.28);
-      font-size: clamp(18px, 4.2vw, 26px);
-      line-height: 1.6;
-      font-weight: 700;
-    }
-
-    .question-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-      color: rgba(83, 96, 133, 0.88);
-      font-size: 14px;
-    }
-
-    .timer-shell {
-      position: relative;
-      flex: 1;
-      min-width: 140px;
-      background: rgba(124, 229, 255, 0.3);
-      border-radius: 999px;
-      height: 12px;
-      overflow: hidden;
-    }
-
-    .timer-bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      background: linear-gradient(120deg, rgba(255, 143, 177, 0.9), rgba(124, 229, 255, 0.9));
-      transform-origin: left center;
-      transition: transform 0.2s linear;
-    }
-
-    .choices {
-      display: grid;
-      gap: 14px;
-    }
-
-    @media (min-width: 640px) {
-      .choices {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .choice-btn {
-      border-radius: var(--radius-md);
-      border: 2px solid transparent;
-      padding: clamp(14px, 4vw, 18px);
-      text-align: left;
-      background: rgba(255, 255, 255, 0.78);
-      font-size: clamp(15px, 3.6vw, 18px);
-      font-weight: 600;
-      color: var(--text);
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.2s ease, border 0.2s ease;
-      position: relative;
-      min-height: 64px;
-    }
-
-    .choice-btn:hover:not(.disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px rgba(123, 142, 210, 0.3);
-    }
-
-    .choice-btn.disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    .choice-btn.correct {
-      border-color: rgba(46, 204, 113, 0.9);
-      box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.2);
-    }
-
-    .choice-btn.wrong {
-      border-color: rgba(231, 76, 60, 0.85);
-      box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.2);
-    }
-
-    .choice-btn span.index {
-      position: absolute;
-      top: 14px;
-      right: 18px;
-      font-size: 13px;
-      color: rgba(90, 101, 145, 0.75);
-      font-weight: 700;
-    }
-
-    .buzz-grid {
-      display: grid;
-      gap: 12px;
-    }
-
-    @media (min-width: 720px) {
-      .buzz-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      }
-    }
-
-    .toast {
-      padding: 12px 16px;
-      border-radius: var(--radius-md);
-      background: rgba(124, 229, 255, 0.3);
-      border: 1px solid rgba(124, 229, 255, 0.48);
-      color: rgba(44, 59, 88, 0.95);
-      font-weight: 600;
-    }
-
-    .toast.negative {
-      background: rgba(255, 177, 177, 0.28);
-      border-color: rgba(255, 122, 122, 0.48);
-      color: rgba(132, 39, 39, 0.92);
-    }
-
-    .result-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 15px;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      border: 1px solid rgba(164, 139, 255, 0.32);
-    }
-
-    .result-table thead {
-      background: rgba(164, 139, 255, 0.18);
-      font-weight: 700;
-    }
-
-    .result-table th,
-    .result-table td {
-      padding: 14px 16px;
-      text-align: left;
-    }
-
-    .result-table tbody tr:nth-child(odd) {
-      background: rgba(255, 255, 255, 0.55);
-    }
-
-    .result-table tbody tr:nth-child(even) {
-      background: rgba(255, 255, 255, 0.8);
-    }
-
-    .subtle {
-      font-size: 13px;
-      color: rgba(90, 101, 145, 0.72);
-    }
-
-    .ranking-board {
-      display: grid;
-      gap: 12px;
-    }
-
-    .ranking-entry {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(124, 229, 255, 0.32);
-      font-weight: 600;
-      font-size: 15px;
-    }
-
-    .ranking-entry span small {
-      display: block;
-      font-size: 12px;
-      color: rgba(90, 101, 145, 0.65);
-      font-weight: 500;
-    }
-
-    .empty-state {
-      padding: 16px;
-      border-radius: var(--radius-md);
-      border: 1px dashed rgba(124, 229, 255, 0.45);
-      background: rgba(255, 255, 255, 0.55);
-      color: rgba(90, 101, 145, 0.75);
-      text-align: center;
-      font-size: 14px;
-    }
-
-    footer {
-      text-align: center;
-      font-size: 12px;
-      color: rgba(90, 101, 145, 0.65);
-      padding-bottom: 32px;
-    }
-
-    a {
-      color: inherit;
-    }
-  </style>
-</head>
-<body>
-  <div class="app-shell">
-    <header class="app-header">
-      <h1>クイズバトルアリーナ</h1>
-      <p>友だちや家族と同じ端末で早押し対戦！ランキング機能で盛り上がろう。問題は<a href="http://www.chukai.ne.jp/~shintaku/hayaoshi/haya00.htm" target="_blank" rel="noopener noreferrer">新宅広二さんの早押しクイズ集</a>から引用しています。</p>
-    </header>
-
-    <section id="screen-setup" class="panel active" aria-labelledby="setup-heading">
-      <div>
-        <h2 id="setup-heading">プレイヤーを登録</h2>
-        <p class="lead">2人以上のプレイヤー名を入力すると対戦をスタートできます。スマホでもPCでも遊べるレスポンシブレイアウトです。</p>
-      </div>
-
-      <form class="player-form" id="player-form">
-        <input type="text" id="player-name" placeholder="プレイヤー名" maxlength="12" autocomplete="off" required />
-        <button type="submit" class="btn btn-primary">追加</button>
-        <button type="button" class="btn btn-ghost" id="btn-clear">全員リセット</button>
-      </form>
-
-      <ul class="player-list" id="player-list" aria-live="polite"></ul>
-
-      <div>
-        <label class="lead" for="question-count">出題数</label>
-        <select id="question-count" style="margin-top: 8px; padding: 12px 14px; border-radius: var(--radius-md); border: 2px solid rgba(164, 139, 255, 0.32); background: rgba(255, 255, 255, 0.85); font-size: 15px;">
-          <option value="5">5問</option>
-          <option value="10" selected>10問</option>
-          <option value="15">15問</option>
-        </select>
-      </div>
-
-      <button class="btn btn-primary" id="btn-start" disabled>対戦スタート！</button>
-
-      <div>
-        <h3 style="margin: 0 0 8px; font-family: var(--font-heading);">歴代ランキング</h3>
-        <div id="global-ranking" class="ranking-board" aria-live="polite"></div>
-      </div>
-    </section>
-
-    <section id="screen-game" class="panel" aria-live="polite">
-      <div class="question-area">
-        <div class="question-meta">
-          <span id="question-progress">1 / 10</span>
-          <div class="timer-shell" aria-hidden="true">
-            <div class="timer-bar" id="timer-bar"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>クイズソロバトル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand">
+          <span class="brand__icon" aria-hidden="true">✦</span>
+          <div class="brand__text">
+            <h1 class="brand__title">クイズソロバトル</h1>
+            <p class="brand__subtitle">ひとりで挑んで、みんなで競うランキング</p>
           </div>
           <span id="countdown" aria-label="残り時間">20s</span>
         </div>
-        <div class="question-bubble" id="question-text">読み込み中…</div>
-        <div class="choices" id="choice-list"></div>
-        <div class="toast" id="toast">回答する人を選んでね！</div>
-      </div>
+        <nav class="header-actions" aria-label="アプリ操作">
+          <button id="viewRankingButton" type="button" class="ghost-button">
+            ランキングを見る
+          </button>
+          <button id="switchThemeButton" type="button" class="ghost-button" aria-label="テーマ切替">
+            🌙
+          </button>
+        </nav>
+      </header>
 
-      <div>
-        <h3 style="margin: 0; font-family: var(--font-heading);">解答権をとる</h3>
-        <div class="buzz-grid" id="buzz-list"></div>
-      </div>
+      <main class="app-main">
+        <section id="startView" class="view view--active" aria-labelledby="startHeading">
+          <div class="view__body">
+            <div class="card card--padded">
+              <h2 id="startHeading" class="card__title">準備しましょう</h2>
+              <p class="card__description">
+                名前を入力して出題数を選ぶだけ。セッションコードを共有すれば、別端末のスコアもひとつのランキングにまとまります。
+              </p>
 
-      <div class="score-grid" id="score-grid"></div>
+              <form id="setupForm" class="form-grid" novalidate>
+                <label class="form-field">
+                  <span class="form-field__label">名前</span>
+                  <input id="playerName" name="playerName" type="text" inputmode="text" autocomplete="name" required maxlength="16" placeholder="例: さくら" />
+                  <span class="form-field__hint">端末ごとに自由に決めてOKです。</span>
+                </label>
 
-      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn btn-ghost" id="btn-pass">この問題をスキップ</button>
-        <button class="btn btn-primary" id="btn-next" disabled>次の問題へ</button>
-      </div>
-    </section>
+                <label class="form-field">
+                  <span class="form-field__label">出題数</span>
+                  <select id="questionCount" name="questionCount">
+                    <option value="5">5問</option>
+                    <option value="10" selected>10問</option>
+                    <option value="15">15問</option>
+                    <option value="20">20問</option>
+                  </select>
+                </label>
 
-    <section id="screen-result" class="panel" aria-labelledby="result-heading">
-      <div>
-        <h2 id="result-heading">最終結果</h2>
-        <p class="lead" id="result-summary">お疲れさまでした！</p>
-      </div>
+                <fieldset class="form-field">
+                  <legend class="form-field__label">セッションコード</legend>
+                  <div class="session-field">
+                    <input id="sessionCode" name="sessionCode" type="text" inputmode="latin" maxlength="12" placeholder="例: SAKURA12" aria-describedby="sessionHint" />
+                    <button id="generateSessionButton" class="ghost-button" type="button">新しく作成</button>
+                  </div>
+                  <p id="sessionHint" class="form-field__hint">
+                    みんなで同じコードを使うとランキングが共有されます。空欄なら自動生成します。
+                  </p>
+                </fieldset>
 
-      <div class="score-grid" id="result-score-grid"></div>
+                <div class="form-actions">
+                  <button class="primary-button" type="submit">クイズを始める</button>
+                </div>
+              </form>
+            </div>
 
-      <table class="result-table" aria-describedby="result-heading">
-        <thead>
-          <tr>
-            <th>順位</th>
-            <th>プレイヤー</th>
-            <th>スコア</th>
-            <th>正解</th>
-            <th>誤答</th>
-          </tr>
-        </thead>
-        <tbody id="result-table"></tbody>
-      </table>
+            <aside class="card card--side" aria-label="ランキング">
+              <header class="card__header">
+                <h3 class="card__title">現在のランキング</h3>
+                <span id="activeSessionLabel" class="badge"></span>
+              </header>
+              <ol id="startRankingList" class="ranking-list"></ol>
+              <footer class="card__footer">
+                <button id="copyStartShareButton" class="ghost-button" type="button">共有リンクをコピー</button>
+                <p class="card__note">同じリンクでアクセスすれば別端末でも同じランキングが表示されます。</p>
+              </footer>
+            </aside>
+          </div>
+        </section>
 
-      <div>
-        <h3 style="margin: 0 0 8px; font-family: var(--font-heading);">歴代ランキング（トップ10）</h3>
-        <div id="result-ranking" class="ranking-board"></div>
-      </div>
+        <section id="quizView" class="view" aria-live="polite" aria-labelledby="quizHeading">
+          <div class="quiz-layout">
+            <div class="card card--padded quiz-card">
+              <header class="quiz-card__header">
+                <h2 id="quizHeading" class="card__title">
+                  <span id="questionBadge" class="badge"></span>
+                  <span id="questionTitle">問題を読んでください</span>
+                </h2>
+                <div class="progress">
+                  <div id="progressBar" class="progress__bar"></div>
+                </div>
+              </header>
 
-      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn btn-ghost" id="btn-back">スタート画面へ戻る</button>
-        <button class="btn btn-primary" id="btn-rematch">同じメンバーでもう一戦</button>
-      </div>
-    </section>
+              <p id="questionText" class="quiz-question"></p>
+              <ul id="choicesList" class="choice-list"></ul>
 
-    <footer>
-      &copy; 2024 Quiz Battle Arena · 問題ソース: <a href="http://www.chukai.ne.jp/~shintaku/hayaoshi/haya00.htm" target="_blank" rel="noopener">新宅広二さんの早押しクイズ</a>
-    </footer>
-  </div>
+              <div class="quiz-status">
+                <span id="correctCounter">正解: 0</span>
+                <span id="timerDisplay">00:00</span>
+              </div>
+            </div>
 
-  <template id="player-chip-template">
-    <li>
-      <span class="name"></span>
-      <button type="button" title="削除">×</button>
-    </li>
-  </template>
+            <aside class="card card--side quiz-info" aria-live="polite">
+              <h3 class="card__title">スコア</h3>
+              <div class="score-highlight">
+                <span id="scoreValue">0</span>
+                <span class="score-label">pts</span>
+              </div>
+              <p id="remainingCount" class="card__note"></p>
+              <button id="skipQuestionButton" class="ghost-button" type="button">次の問題へ</button>
+            </aside>
+          </div>
+        </section>
 
-  <template id="score-card-template">
-    <div class="score-card">
-      <span class="rank">1位</span>
-      <div class="name">Player</div>
-      <div class="score">0 pt</div>
-      <div class="meta">正解 0 / 誤答 0</div>
+        <section id="resultView" class="view" aria-labelledby="resultHeading">
+          <div class="card card--padded result-summary">
+            <header class="card__header">
+              <h2 id="resultHeading" class="card__title">結果発表</h2>
+              <p id="resultCaption" class="card__description"></p>
+            </header>
+            <div class="result-stats">
+              <div>
+                <p class="result-stat__label">スコア</p>
+                <p id="finalScore" class="result-stat__value">0</p>
+              </div>
+              <div>
+                <p class="result-stat__label">正解数</p>
+                <p id="finalCorrect" class="result-stat__value">0</p>
+              </div>
+              <div>
+                <p class="result-stat__label">タイム</p>
+                <p id="finalTime" class="result-stat__value">00:00</p>
+              </div>
+            </div>
+            <div class="result-actions">
+              <button id="playAgainButton" class="primary-button" type="button">同じセッションでもう一度</button>
+              <button id="returnStartButton" class="ghost-button" type="button">スタートに戻る</button>
+            </div>
+          </div>
+
+          <div class="card card--padded result-ranking">
+            <header class="card__header">
+              <h3 class="card__title">セッションランキング</h3>
+              <span id="resultSessionLabel" class="badge"></span>
+            </header>
+            <div class="table-wrapper">
+              <table class="ranking-table">
+                <thead>
+                  <tr>
+                    <th scope="col">順位</th>
+                    <th scope="col">名前</th>
+                    <th scope="col">スコア</th>
+                    <th scope="col">正解数</th>
+                    <th scope="col">タイム</th>
+                    <th scope="col">プレイ日時</th>
+                  </tr>
+                </thead>
+                <tbody id="resultRankingBody"></tbody>
+              </table>
+            </div>
+            <footer class="card__footer">
+              <div class="share-tools">
+                <button id="copyResultShareButton" class="primary-button" type="button">ランキングリンクをコピー</button>
+                <button id="downloadResultButton" class="ghost-button" type="button">CSVで保存</button>
+              </div>
+              <p class="card__note">
+                共有リンクを別端末で開いてプレイすると、同じランキングに結果が追加されます。
+              </p>
+            </footer>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <small>みんなの挑戦を記録して、最高のスコアを目指しましょう！</small>
+      </footer>
     </div>
   </template>
 
-  <template id="buzz-card-template">
-    <div>
-      <div class="score-card">
-        <div class="name">Player</div>
-        <div class="meta">タップで解答権</div>
-      </div>
-      <button class="btn buzz">回答ボタン</button>
-    </div>
-  </template>
+    <dialog id="rankingDialog" class="ranking-dialog">
+      <form method="dialog" class="ranking-dialog__card">
+        <header>
+          <h2>セッションランキング</h2>
+        </header>
+        <div class="ranking-dialog__content">
+          <p id="dialogSessionLabel" class="badge"></p>
+          <ol id="dialogRankingList" class="ranking-list"></ol>
+        </div>
+        <menu class="ranking-dialog__actions">
+          <button value="close" class="primary-button">閉じる</button>
+        </menu>
+      </form>
+    </dialog>
 
-  <template id="ranking-entry-template">
-    <div class="ranking-entry">
-      <span>1位 — 0pt<small>プレイヤー</small></span>
-      <span class="subtle">正解 0</span>
-    </div>
-  </template>
+    <template id="rankingItemTemplate">
+      <li class="ranking-list__item">
+        <span class="ranking-list__rank"></span>
+        <div class="ranking-list__main">
+          <span class="ranking-list__name"></span>
+          <span class="ranking-list__meta"></span>
+        </div>
+        <span class="ranking-list__score"></span>
+      </li>
+    </template>
 
-  <script>
-    const PROXY_URL = "https://r.jina.ai/http://www.chukai.ne.jp/~shintaku/hayaoshi/haya00.htm";
-    const LOCAL_STORAGE_KEY = "quiz-battle-arena-ranking";
-    const QUESTION_TIME = 25; // seconds
+    <template id="rankingRowTemplate">
+      <tr>
+        <th scope="row"></th>
+        <td class="table__name"></td>
+        <td class="table__score"></td>
+        <td class="table__correct"></td>
+        <td class="table__time"></td>
+        <td class="table__played"></td>
+      </tr>
+    </template>
 
-    // オフライン時に利用する予備セット（新宅広二さんの早押しクイズ集より抜粋）
-    const FALLBACK_QUESTIONS = [
-      { id: "A-01", question: "国際的な航空信号で『SOS』を表すモールス信号は、ドットとダッシュをどう組み合わせたもの？", choices: ["・・・ーーー・・・", "・・ー・ー・・", "ーーー・・・ーーー", "・・ーーー・・"], answer: 0 },
-      { id: "A-02", question: "童謡『ふじの山』の歌い出しは『あたまを雲の上に出し』ですが、2行目に続く歌詞は？", choices: ["四方の山を見おろして", "四方の海を見おろして", "四方の町を見おろして", "四方の空を見おろして"], answer: 0 },
-      { id: "A-03", question: "日本の都道府県で唯一、県の名前と県庁所在地の名前が異なるのはどこ？", choices: ["北海道", "山梨県", "沖縄県", "石川県"], answer: 3 },
-      { id: "A-04", question: "宮沢賢治の童話『銀河鉄道の夜』で、主人公ジョバンニの親友の名前は？", choices: ["カムパネルラ", "ポラーノ", "ビアンカ", "ジョセフィーヌ"], answer: 0 },
-      { id: "A-05", question: "五円硬貨の穴の直径は約5ミリですが、硬貨の外径はいくつ？", choices: ["16mm", "18mm", "20mm", "22mm"], answer: 3 },
-      { id: "A-06", question: "物理の単位で、電流の強さを表す国際単位は？", choices: ["ボルト", "アンペア", "ワット", "オーム"], answer: 1 },
-      { id: "A-07", question: "JIS規格のA4用紙の長辺は297mmですが、短辺は？", choices: ["190mm", "210mm", "220mm", "240mm"], answer: 1 },
-      { id: "A-08", question: "気象庁の用語で『猛暑日』とは最高気温が何度以上の日？", choices: ["33℃", "35℃", "37℃", "40℃"], answer: 1 },
-      { id: "A-09", question: "日本の祝日で、毎年5月3日にあたるのは？", choices: ["みどりの日", "こどもの日", "憲法記念日", "建国記念の日"], answer: 2 },
-      { id: "A-10", question: "世界三大料理のうち、中国料理とともに数えられるのはフランス料理とどこ？", choices: ["イタリア料理", "トルコ料理", "スペイン料理", "インド料理"], answer: 1 },
-      { id: "A-11", question: "オリンピック憲章で定められた五輪の色は、青・黄・黒・緑と何色？", choices: ["赤", "白", "紫", "金"], answer: 0 },
-      { id: "A-12", question: "世界遺産・姫路城の別名は？", choices: ["白鷺城", "鶴ヶ城", "烏城", "亀城"], answer: 0 },
-      { id: "A-13", question: "日本の郵便番号は何桁？", choices: ["5桁", "6桁", "7桁", "8桁"], answer: 2 },
-      { id: "A-14", question: "童謡『ふるさと』で、ふるさとに残してきたのは『父母』と何？", choices: ["友だち", "兄弟", "小さな家", "山の小川"], answer: 3 },
-      { id: "A-15", question: "1月1日から数えてちょうど100日目は通常何月何日？", choices: ["4月9日", "4月10日", "4月11日", "4月12日"], answer: 1 },
-      { id: "A-16", question: "江戸時代の五街道の一つで、江戸と京都を結んでいた道は？", choices: ["甲州街道", "日光街道", "中山道", "東海道"], answer: 3 },
-      { id: "A-17", question: "童話『桃太郎』で、桃太郎がおばあさんからもらう団子は何団子？", choices: ["あんこ団子", "きび団子", "みたらし団子", "草団子"], answer: 1 },
-      { id: "A-18", question: "赤道直下に位置する国のうち、アフリカ大陸にあるのはどれ？", choices: ["ケニア", "エクアドル", "マレーシア", "ペルー"], answer: 0 },
-      { id: "A-19", question: "童謡『春が来た』で『どこに来た』と歌われるのは『野に』と『山に』とどこ？", choices: ["町に", "里に", "空に", "川に"], answer: 1 },
-      { id: "A-20", question: "氷が水に浮かぶのは、水と比べて氷の密度がどうなっているから？", choices: ["大きい", "小さい", "同じ", "温度による"], answer: 1 },
-      { id: "A-21", question: "二十四節気で、1年の始まりに位置づけられるのは？", choices: ["啓蟄", "大寒", "立春", "春分"], answer: 2 },
-      { id: "A-22", question: "映画『となりのトトロ』で、サツキとメイが住む村の名称は？", choices: ["松郷", "七国山", "狭山", "松郷村"], answer: 1 },
-      { id: "A-23", question: "日本三景に数えられるのは、松島・天橋立とどこ？", choices: ["宮島", "厳島", "兼六園", "袋田"], answer: 0 },
-      { id: "A-24", question: "源氏物語の作者は？", choices: ["紫式部", "清少納言", "与謝野晶子", "和泉式部"], answer: 0 }
-    ];
-
-    const state = {
-      players: [],
-      questions: [],
-      currentIndex: 0,
-      answeringId: null,
-      lock: false,
-      countdown: QUESTION_TIME,
-      timerId: null,
-    };
-
-    const refs = {
-      screens: {
-        setup: document.getElementById("screen-setup"),
-        game: document.getElementById("screen-game"),
-        result: document.getElementById("screen-result"),
-      },
-      playerForm: document.getElementById("player-form"),
-      playerName: document.getElementById("player-name"),
-      playerList: document.getElementById("player-list"),
-      btnClear: document.getElementById("btn-clear"),
-      btnStart: document.getElementById("btn-start"),
-      questionCount: document.getElementById("question-count"),
-      globalRanking: document.getElementById("global-ranking"),
-      game: {
-        progress: document.getElementById("question-progress"),
-        text: document.getElementById("question-text"),
-        choices: document.getElementById("choice-list"),
-        toast: document.getElementById("toast"),
-        buzzList: document.getElementById("buzz-list"),
-        scoreGrid: document.getElementById("score-grid"),
-        btnNext: document.getElementById("btn-next"),
-        btnPass: document.getElementById("btn-pass"),
-        timerBar: document.getElementById("timer-bar"),
-        countdown: document.getElementById("countdown"),
-      },
-      result: {
-        summary: document.getElementById("result-summary"),
-        scoreGrid: document.getElementById("result-score-grid"),
-        table: document.getElementById("result-table"),
-        ranking: document.getElementById("result-ranking"),
-        btnBack: document.getElementById("btn-back"),
-        btnRematch: document.getElementById("btn-rematch"),
-      },
-    };
-
-    const templates = {
-      playerChip: document.getElementById("player-chip-template"),
-      scoreCard: document.getElementById("score-card-template"),
-      buzzCard: document.getElementById("buzz-card-template"),
-      rankingEntry: document.getElementById("ranking-entry-template"),
-    };
-
-    function uid() {
-      return Math.random().toString(36).slice(2, 9);
-    }
-
-    function switchScreen(screen) {
-      Object.values(refs.screens).forEach((el) => el.classList.remove("active"));
-      screen.classList.add("active");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function renderPlayerList() {
-      refs.playerList.innerHTML = "";
-      if (!state.players.length) {
-        const li = document.createElement("li");
-        li.className = "empty-state";
-        li.textContent = "まだプレイヤーがいません。名前を入力して追加してください。";
-        refs.playerList.appendChild(li);
-      } else {
-        state.players.forEach((player) => {
-          const node = templates.playerChip.content.firstElementChild.cloneNode(true);
-          node.querySelector(".name").textContent = player.name;
-          node.querySelector("button").addEventListener("click", () => removePlayer(player.id));
-          refs.playerList.appendChild(node);
-        });
-      }
-      refs.btnStart.disabled = state.players.length < 2;
-    }
-
-    function removePlayer(id) {
-      state.players = state.players.filter((p) => p.id !== id);
-      renderPlayerList();
-    }
-
-    function addPlayer(name) {
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      if (state.players.some((p) => p.name === trimmed)) {
-        notify("同じ名前のプレイヤーがいます。別の名前にしてください。", true);
-        return;
-      }
-      state.players.push({
-        id: uid(),
-        name: trimmed,
-        score: 0,
-        correct: 0,
-        wrong: 0,
-      });
-      renderPlayerList();
-      refs.playerName.value = "";
-      refs.playerName.focus();
-    }
-
-    function notify(message, negative = false) {
-      refs.game.toast.textContent = message;
-      refs.game.toast.classList.toggle("negative", negative);
-    }
-
-    async function loadQuestions() {
-      try {
-        const response = await fetch(PROXY_URL, { cache: "no-store" });
-        if (!response.ok) throw new Error("fetch failed");
-        const html = await response.text();
-        const parsed = parseQuestionsFromHtml(html);
-        if (parsed.length) {
-          console.info(`Loaded ${parsed.length} questions from source.`);
-          return parsed;
-        }
-        console.warn("Parsed question count is zero, using fallback");
-        return FALLBACK_QUESTIONS.slice();
-      } catch (err) {
-        console.warn("Failed to load questions from network, fallback used", err);
-        return FALLBACK_QUESTIONS.slice();
-      }
-    }
-
-    function parseQuestionsFromHtml(html) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-      const nodes = Array.from(doc.querySelectorAll("body font, body td, body p"));
-      const questions = [];
-      let current = null;
-      nodes.forEach((node) => {
-        const text = node.textContent.replace(/\s+/g, " ").trim();
-        if (!text) return;
-        const qMatch = text.match(/^Q\s*(\d+)\s*(.*)$/i);
-        if (qMatch) {
-          if (current && current.choices.filter(Boolean).length === 4) {
-            questions.push(current);
-          }
-          current = {
-            id: `Q${qMatch[1]}`,
-            question: qMatch[2].replace(/^[\.:：]/, "").trim(),
-            choices: [],
-            answer: 0,
-          };
-          return;
-        }
-        if (!current) return;
-        const choiceMatch = text.match(/^[（(]?([1-4１２３４])[)）.．:：]\s*(.*)$/);
-        if (choiceMatch) {
-          const index = "１２３４".indexOf(choiceMatch[1]);
-          const normalizedIndex = index >= 0 ? index : Number(choiceMatch[1]) - 1;
-          current.choices[normalizedIndex] = choiceMatch[2].trim();
-          return;
-        }
-        const answerMatch = text.match(/正解[：: ]+([1-4１２３４])/);
-        if (answerMatch) {
-          const index = "１２３４".indexOf(answerMatch[1]);
-          current.answer = index >= 0 ? index : Number(answerMatch[1]) - 1;
-        }
-      });
-      if (current && current.choices.filter(Boolean).length === 4) {
-        questions.push(current);
-      }
-      return questions
-        .map((q) => ({
-          ...q,
-          choices: q.choices.map((choice) => (choice || "").trim()),
-        }))
-        .filter((q) => Array.isArray(q.choices) && q.choices.length === 4 && q.choices.every(Boolean));
-    }
-
-    function shuffle(array) {
-      const copy = array.slice();
-      for (let i = copy.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function selectQuestions(all, count) {
-      const unique = all
-        .map((q) => ({
-          ...q,
-          question: (q.question || "").trim(),
-          choices: Array.isArray(q.choices) ? q.choices.map((c) => (c || "").trim()) : [],
-        }))
-        .filter((q) => q.question && q.choices.length === 4 && q.choices.every(Boolean));
-      const selected = shuffle(unique).slice(0, count);
-      if (selected.length < count && FALLBACK_QUESTIONS.length) {
-        const extra = shuffle(FALLBACK_QUESTIONS).slice(0, count - selected.length);
-        return selected.concat(extra);
-      }
-      return selected;
-    }
-
-    function renderBuzzers() {
-      refs.game.buzzList.innerHTML = "";
-      state.players.forEach((player) => {
-        const wrapper = document.createElement("div");
-        wrapper.className = "buzz-item";
-        const card = templates.buzzCard.content.firstElementChild.cloneNode(true);
-        const cardBody = card.querySelector(".score-card");
-        cardBody.querySelector(".name").textContent = player.name;
-        cardBody.querySelector(".meta").textContent = "タップで解答権";
-        const button = card.querySelector(".btn.buzz");
-        const activate = () => {
-          if (state.lock) return;
-          state.answeringId = player.id;
-          highlightActivePlayer();
-          notify(`${player.name}さんが解答します！`);
-        };
-        cardBody.addEventListener("click", activate);
-        button.addEventListener("click", activate);
-        wrapper.appendChild(card);
-        refs.game.buzzList.appendChild(wrapper);
-      });
-    }
-
-    function highlightActivePlayer() {
-      const cards = Array.from(refs.game.scoreGrid.querySelectorAll(".score-card"));
-      cards.forEach((card) => card.classList.remove("active"));
-      const active = cards.find((card) => card.dataset.id === state.answeringId);
-      if (active) active.classList.add("active");
-    }
-
-    function renderScoreboard(container, players, activeId = state.answeringId) {
-      container.innerHTML = "";
-      if (!players.length) {
-        const empty = document.createElement("div");
-        empty.className = "empty-state";
-        empty.textContent = "まだスコアはありません。";
-        container.appendChild(empty);
-        return;
-      }
-      const sorted = players.slice().sort((a, b) => b.score - a.score || b.correct - a.correct || a.name.localeCompare(b.name));
-      sorted.forEach((player, index) => {
-        const node = templates.scoreCard.content.firstElementChild.cloneNode(true);
-        node.dataset.id = player.id;
-        node.querySelector(".rank").textContent = `${index + 1}位`;
-        node.querySelector(".name").textContent = player.name;
-        node.querySelector(".score").textContent = `${player.score} pt`;
-        node.querySelector(".meta").textContent = `正解 ${player.correct} / 誤答 ${player.wrong}`;
-        if (player.id === activeId) {
-          node.classList.add("active");
-        }
-        container.appendChild(node);
-      });
-    }
-
-    function renderChoices(question) {
-      refs.game.choices.innerHTML = "";
-      question.choices.forEach((choice, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "choice-btn";
-        button.innerHTML = `<span>${choice}</span><span class="index">${index + 1}</span>`;
-        button.addEventListener("click", () => handleChoice(index));
-        refs.game.choices.appendChild(button);
-      });
-    }
-
-    function setChoicesDisabled(disabled = true) {
-      refs.game.choices.querySelectorAll(".choice-btn").forEach((button) => {
-        button.classList.toggle("disabled", disabled);
-        button.disabled = disabled;
-      });
-    }
-
-    function handleChoice(index) {
-      if (state.lock) return;
-      if (!state.answeringId) {
-        notify("先に解答するプレイヤーを選んでね！", true);
-        return;
-      }
-      const question = state.questions[state.currentIndex];
-      const player = state.players.find((p) => p.id === state.answeringId);
-      if (!player) {
-        notify("プレイヤーが見つかりません。", true);
-        return;
-      }
-      state.lock = true;
-      stopTimer();
-      const correctIndex = question.answer;
-      const buttons = Array.from(refs.game.choices.querySelectorAll(".choice-btn"));
-      buttons.forEach((button, idx) => {
-        button.classList.toggle("correct", idx === correctIndex);
-        if (idx === index && idx !== correctIndex) {
-          button.classList.add("wrong");
-        }
-        button.disabled = true;
-        button.classList.add("disabled");
-      });
-      if (index === correctIndex) {
-        player.score += 10;
-        player.correct += 1;
-        notify(`${player.name}さん、正解です！ +10pt`);
-      } else {
-        player.score = Math.max(0, player.score - 5);
-        player.wrong += 1;
-        notify(`${player.name}さん、残念！ -5pt (正解は${correctIndex + 1}番)`, true);
-      }
-      renderScoreboard(refs.game.scoreGrid, state.players);
-      highlightActivePlayer();
-      refs.game.btnNext.disabled = false;
-    }
-
-    function loadQuestion(index) {
-      const question = state.questions[index];
-      if (!question) return;
-      state.answeringId = null;
-      state.lock = false;
-      refs.game.btnNext.disabled = true;
-      refs.game.text.textContent = question.question;
-      refs.game.progress.textContent = `${index + 1} / ${state.questions.length}`;
-      renderChoices(question);
-      renderScoreboard(refs.game.scoreGrid, state.players);
-      highlightActivePlayer();
-      setChoicesDisabled(false);
-      notify("回答する人を選んでね！");
-      state.countdown = QUESTION_TIME;
-      refs.game.countdown.textContent = `${state.countdown}s`;
-      refs.game.timerBar.style.transform = "scaleX(1)";
-      startTimer();
-    }
-
-    function startTimer() {
-      stopTimer();
-      const total = QUESTION_TIME;
-      state.timerId = setInterval(() => {
-        state.countdown -= 1;
-        if (state.countdown <= 0) {
-          refs.game.countdown.textContent = "0s";
-          refs.game.timerBar.style.transform = "scaleX(0)";
-          stopTimer();
-          handleTimeout();
-        } else {
-          refs.game.countdown.textContent = `${state.countdown}s`;
-          const ratio = state.countdown / total;
-          refs.game.timerBar.style.transform = `scaleX(${Math.max(ratio, 0)})`;
-        }
-      }, 1000);
-    }
-
-    function handleTimeout() {
-      if (state.lock) return;
-      state.lock = true;
-      notify("タイムアップ！ポイントは入りません。", true);
-      setChoicesDisabled(true);
-      refs.game.btnNext.disabled = false;
-    }
-
-    function stopTimer() {
-      if (state.timerId) {
-        clearInterval(state.timerId);
-        state.timerId = null;
-      }
-    }
-
-    function nextQuestion() {
-      stopTimer();
-      state.currentIndex += 1;
-      if (state.currentIndex >= state.questions.length) {
-        finishGame();
-        return;
-      }
-      loadQuestion(state.currentIndex);
-    }
-
-    function skipQuestion() {
-      if (state.lock) {
-        nextQuestion();
-        return;
-      }
-      notify("スキップしました。", true);
-      stopTimer();
-      refs.game.btnNext.disabled = false;
-      setChoicesDisabled(true);
-      state.lock = true;
-    }
-
-    function loadRanking() {
-      try {
-        const stored = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
-        return Array.isArray(stored) ? stored : [];
-      } catch (err) {
-        console.warn("Failed to parse ranking storage", err);
-        return [];
-      }
-    }
-
-    function saveRanking(entries) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries));
-    }
-
-    function updateRankingBoard(target, entries) {
-      target.innerHTML = "";
-      if (!entries.length) {
-        const empty = document.createElement("div");
-        empty.className = "empty-state";
-        empty.textContent = "まだ記録がありません。対戦してランキングを作ろう！";
-        target.appendChild(empty);
-        return;
-      }
-      entries.forEach((entry, index) => {
-        const node = templates.rankingEntry.content.firstElementChild.cloneNode(true);
-        const label = node.querySelector("span");
-        label.innerHTML = `${index + 1}位 — ${entry.score}pt<small>${entry.name}</small>`;
-        node.querySelector(".subtle").textContent = `正解 ${entry.correct} (${new Date(entry.timestamp).toLocaleDateString()})`;
-        target.appendChild(node);
-      });
-    }
-
-    function persistRanking(players, totalQuestions) {
-      const entries = loadRanking();
-      players.forEach((player) => {
-        entries.push({
-          name: player.name,
-          score: player.score,
-          correct: player.correct,
-          wrong: player.wrong,
-          total: totalQuestions,
-          timestamp: Date.now(),
-        });
-      });
-      entries.sort((a, b) => b.score - a.score || b.correct - a.correct || a.name.localeCompare(b.name));
-      const trimmed = entries.slice(0, 10);
-      saveRanking(trimmed);
-      return trimmed;
-    }
-
-    function finishGame() {
-      stopTimer();
-      const sorted = state.players.slice().sort((a, b) => b.score - a.score || b.correct - a.correct || a.name.localeCompare(b.name));
-      const top = sorted[0];
-      const summary = top ? `${top.name}さんが ${top.score}pt で優勝！ おめでとう！` : "対戦が完了しました。";
-      refs.result.summary.textContent = summary;
-      renderScoreboard(refs.result.scoreGrid, sorted, null);
-      refs.result.table.innerHTML = "";
-      sorted.forEach((player, index) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${index + 1}</td><td>${player.name}</td><td>${player.score}</td><td>${player.correct}</td><td>${player.wrong}</td>`;
-        refs.result.table.appendChild(tr);
-      });
-      const ranking = persistRanking(sorted, state.questions.length);
-      updateRankingBoard(refs.result.ranking, ranking);
-      updateRankingBoard(refs.globalRanking, ranking);
-      switchScreen(refs.screens.result);
-    }
-
-    function resetGameState() {
-      stopTimer();
-      state.questions = [];
-      state.currentIndex = 0;
-      state.answeringId = null;
-      state.lock = false;
-      state.countdown = QUESTION_TIME;
-    }
-
-    async function startGame() {
-      resetGameState();
-      const count = Number(refs.questionCount.value) || 10;
-      const allQuestions = await loadQuestions();
-      state.questions = selectQuestions(allQuestions, count);
-      if (!state.questions.length) {
-        notify("問題データが読み込めませんでした。", true);
-        return;
-      }
-      state.players = state.players.map((p) => ({ ...p, score: 0, correct: 0, wrong: 0 }));
-      renderBuzzers();
-      renderScoreboard(refs.game.scoreGrid, state.players);
-      refs.game.btnNext.disabled = true;
-      refs.game.btnPass.disabled = false;
-      switchScreen(refs.screens.game);
-      loadQuestion(0);
-    }
-
-    function backToSetup() {
-      resetGameState();
-      renderPlayerList();
-      updateRankingBoard(refs.globalRanking, loadRanking());
-      switchScreen(refs.screens.setup);
-    }
-
-    function bootstrap() {
-      renderPlayerList();
-      updateRankingBoard(refs.globalRanking, loadRanking());
-
-      refs.playerForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        addPlayer(refs.playerName.value);
-      });
-
-      refs.btnClear.addEventListener("click", () => {
-        state.players = [];
-        renderPlayerList();
-      });
-
-      refs.btnStart.addEventListener("click", () => {
-        if (state.players.length < 2) {
-          notify("プレイヤーは2人以上必要です。", true);
-          return;
-        }
-        startGame();
-      });
-
-      refs.game.btnNext.addEventListener("click", nextQuestion);
-      refs.game.btnPass.addEventListener("click", skipQuestion);
-
-      refs.result.btnBack.addEventListener("click", backToSetup);
-      refs.result.btnRematch.addEventListener("click", () => {
-        if (!state.players.length) {
-          backToSetup();
-          return;
-        }
-        startGame();
-      });
-
-      document.addEventListener("keydown", (event) => {
-        if (refs.screens.game.classList.contains("active")) {
-          const number = parseInt(event.key, 10);
-          if (!Number.isNaN(number) && number >= 1 && number <= 4) {
-            handleChoice(number - 1);
-          }
-        }
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", bootstrap);
-  </script>
-</body>
+    <script type="module" src="app.js"></script>
+  </body>
 </html>
