@@ -1,9 +1,13 @@
-const SOURCE_URL = "https://www.chukai.ne.jp/~shintaku/hayaoshi/haya00.htm";
+const SOURCE_URL = "https://r.jina.ai/https://www.chukai.ne.jp/~shintaku/hayaoshi/haya00.htm";
 const STORAGE_PREFIX = "quizSolo.session:";
 const LAST_SESSION_KEY = "quizSolo.lastSession";
 const SCORE_PER_CORRECT = 10;
 const MAX_SESSION_HISTORY = 150;
 const THEME_STORAGE_KEY = "quizSolo.theme";
+const DEFAULT_SESSION_ID = "GLOBALBOARD";
+const REMOTE_SCOREBOARD_ENDPOINT = "https://jsonbase.com/egggx/quiz-app";
+const REMOTE_SCOREBOARD_TIMEOUT = 6000;
+const APP_SHARE_URL = "https://egggx.github.io/quiz-app/";
 
 const FALLBACK_QUESTIONS = [
   {
@@ -198,16 +202,20 @@ const elements = {
   playAgain: document.getElementById("playAgainButton"),
   returnStart: document.getElementById("returnStartButton"),
   viewRankingButton: document.getElementById("viewRankingButton"),
+  qrButton: document.getElementById("openQrButton"),
   rankingDialog: document.getElementById("rankingDialog"),
   dialogSessionLabel: document.getElementById("dialogSessionLabel"),
   dialogRankingList: document.getElementById("dialogRankingList"),
   rankingItemTemplate: document.getElementById("rankingItemTemplate"),
   rankingRowTemplate: document.getElementById("rankingRowTemplate"),
   switchThemeButton: document.getElementById("switchThemeButton"),
+  qrDialog: document.getElementById("qrDialog"),
+  qrImage: document.getElementById("qrImage"),
+  qrLink: document.getElementById("qrLink"),
 };
 
 const state = {
-  sessionId: "",
+  sessionId: DEFAULT_SESSION_ID,
   questions: [],
   questionIndex: 0,
   correct: 0,
@@ -230,6 +238,7 @@ function init() {
   updateStartSessionPreview();
   updateShareLink();
   updateThemeButton();
+  void hydrateRemoteSession();
 }
 
 function bindEvents() {
@@ -242,13 +251,22 @@ function bindEvents() {
   elements.returnStart.addEventListener("click", () => switchView("start"));
   elements.viewRankingButton.addEventListener("click", openRankingDialog);
   elements.switchThemeButton.addEventListener("click", toggleTheme);
+  elements.qrButton?.addEventListener("click", openQrDialog);
   elements.rankingDialog.addEventListener("close", () => {
     elements.dialogRankingList.innerHTML = "";
+  });
+  elements.qrDialog?.addEventListener("close", () => {
+    if (elements.qrImage) {
+      elements.qrImage.removeAttribute("src");
+    }
+  });
+  window.addEventListener("online", () => {
+    void hydrateRemoteSession();
   });
 }
 
 function ensureSessionId() {
-  state.sessionId = sanitizeSessionId(state.sessionId) || generateSessionId();
+  state.sessionId = sanitizeSessionId(state.sessionId) || DEFAULT_SESSION_ID;
   const existing = readSession(state.sessionId);
   if (!existing.updatedAt && existing.scoreboard.length === 0) {
     writeSession(existing);
@@ -263,7 +281,7 @@ async function handleSetupSubmit(event) {
     return;
   }
   const totalCount = Number(elements.questionCount.value) || 10;
-  const sessionId = sanitizeSessionId(state.sessionId) || generateSessionId();
+  const sessionId = sanitizeSessionId(state.sessionId) || DEFAULT_SESSION_ID;
   state.sessionId = sessionId;
   state.questionIndex = 0;
   state.correct = 0;
@@ -384,7 +402,7 @@ function advanceQuestion() {
   renderQuestion();
 }
 
-function finishGame() {
+async function finishGame() {
   stopTimer();
   elements.progressBar.style.width = "100%";
   const durationMs = state.elapsedMs;
@@ -396,8 +414,15 @@ function finishGame() {
     total: state.questions.length,
     timeMs: durationMs,
   });
-  const session = mergeScoreIntoSession(state.sessionId, entry);
-  renderResults(entry, session);
+  try {
+    const session = await mergeScoreIntoSession(state.sessionId, entry);
+    renderResults(entry, session);
+  } catch (error) {
+    console.error("Failed to update ranking", error);
+    const fallbackSession = readSession(state.sessionId);
+    renderResults(entry, fallbackSession);
+    showInlineToast("ランキングの更新に失敗しました。しばらくしてから再試行してください。");
+  }
   switchView("result");
 }
 
@@ -548,17 +573,23 @@ function buildScoreEntry({ name, score, correct, total, timeMs }) {
   };
 }
 
-function mergeScoreIntoSession(sessionId, entry) {
-  const existing = readSession(sessionId);
-  const merged = mergeEntries(existing.scoreboard, [entry]);
+async function mergeScoreIntoSession(sessionId, entry) {
+  const normalizedId = sanitizeSessionId(sessionId) || DEFAULT_SESSION_ID;
+  const localSession = readSession(normalizedId);
+  const remoteSession = await fetchRemoteSession(normalizedId);
+  const baseEntries = remoteSession
+    ? mergeEntries(localSession.scoreboard, remoteSession.scoreboard)
+    : localSession.scoreboard;
+  const merged = mergeEntries(baseEntries, [entry]);
   const session = {
-    sessionId,
+    sessionId: normalizedId,
     scoreboard: sortEntries(merged).slice(0, MAX_SESSION_HISTORY),
     updatedAt: new Date().toISOString(),
   };
   writeSession(session);
   updateStartSessionPreview();
   updateShareLink(session);
+  await pushRemoteSession(session);
   return session;
 }
 
@@ -610,6 +641,80 @@ function writeSession(session) {
     localStorage.setItem(key, JSON.stringify(session));
   } catch (error) {
     console.warn("Failed to store session", error);
+  }
+}
+
+async function hydrateRemoteSession() {
+  const sessionId = sanitizeSessionId(state.sessionId) || DEFAULT_SESSION_ID;
+  const remote = await fetchRemoteSession(sessionId);
+  if (!remote) return;
+  const local = readSession(sessionId);
+  const merged = mergeEntries(remote.scoreboard, local.scoreboard);
+  const session = {
+    sessionId,
+    scoreboard: sortEntries(merged).slice(0, MAX_SESSION_HISTORY),
+    updatedAt: remote.updatedAt ?? local.updatedAt ?? new Date().toISOString(),
+  };
+  writeSession(session);
+  updateStartSessionPreview();
+  updateShareLink(session);
+}
+
+async function fetchRemoteSession(sessionId) {
+  if (!REMOTE_SCOREBOARD_ENDPOINT) return null;
+  const url = `${REMOTE_SCOREBOARD_ENDPOINT}/${sessionId}`;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REMOTE_SCOREBOARD_TIMEOUT);
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (response.status === 404) {
+      return { sessionId, scoreboard: [], updatedAt: null };
+    }
+    if (!response.ok) {
+      throw new Error(`Unexpected status ${response.status}`);
+    }
+    const payload = await response.json();
+    const data = payload?.result ?? payload?.data ?? payload;
+    const scoreboard = Array.isArray(data?.scoreboard) ? data.scoreboard : [];
+    return {
+      sessionId,
+      scoreboard,
+      updatedAt: data?.updatedAt ?? null,
+    };
+  } catch (error) {
+    console.warn("Failed to fetch remote session", error);
+    return null;
+  }
+}
+
+async function pushRemoteSession(session) {
+  if (!REMOTE_SCOREBOARD_ENDPOINT) return;
+  const url = `${REMOTE_SCOREBOARD_ENDPOINT}/${session.sessionId}`;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REMOTE_SCOREBOARD_TIMEOUT);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: session.sessionId,
+        scoreboard: session.scoreboard,
+        updatedAt: session.updatedAt,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!response.ok) {
+      throw new Error(`Unexpected status ${response.status}`);
+    }
+  } catch (error) {
+    console.warn("Failed to push remote session", error);
+    showInlineToast("オンラインランキングの保存に失敗しました");
   }
 }
 
@@ -837,6 +942,7 @@ function handlePlayAgain() {
   state.sessionId = state.lastSetup.sessionId;
   updateStartSessionPreview();
   updateShareLink();
+  void hydrateRemoteSession();
   switchView("start");
   setTimeout(() => {
     elements.setupForm.requestSubmit();
@@ -909,6 +1015,31 @@ function toggleTheme() {
     console.warn("Failed to persist theme", error);
   }
   updateThemeButton();
+}
+
+function openQrDialog() {
+  if (!elements.qrDialog) {
+    showInlineToast("QRコードを表示できません");
+    return;
+  }
+  if (elements.qrImage) {
+    elements.qrImage.src = buildQrImageSrc(APP_SHARE_URL);
+    elements.qrImage.alt = `${APP_SHARE_URL} へのQRコード`;
+  }
+  if (elements.qrLink) {
+    elements.qrLink.textContent = APP_SHARE_URL;
+    elements.qrLink.href = APP_SHARE_URL;
+  }
+  if (typeof elements.qrDialog.showModal === "function") {
+    elements.qrDialog.showModal();
+  } else {
+    showInlineToast("お使いのブラウザではダイアログを開けません");
+  }
+}
+
+function buildQrImageSrc(url) {
+  const encoded = encodeURIComponent(url);
+  return `https://chart.googleapis.com/chart?chs=240x240&cht=qr&chl=${encoded}&choe=UTF-8`; 
 }
 
 function hydrateTheme() {

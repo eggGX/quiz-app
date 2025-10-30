@@ -529,6 +529,57 @@ body {
   justify-content: flex-end;
 }
 
+.qr-dialog {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0;
+  background: transparent;
+}
+
+.qr-dialog::backdrop {
+  background: rgba(20, 16, 30, 0.55);
+}
+
+.qr-dialog__card {
+  border: none;
+  padding: 1.8rem;
+  background: var(--bg-strong);
+  border-radius: var(--radius);
+  min-width: min(360px, 90vw);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  text-align: center;
+}
+
+.qr-dialog__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qr-dialog__image {
+  inline-size: 240px;
+  block-size: 240px;
+  max-width: 100%;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.qr-dialog__content a {
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.qr-dialog__actions {
+  display: flex;
+  justify-content: center;
+}
+
 @media (max-width: 960px) {
   .view__body,
   .quiz-layout {
